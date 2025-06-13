@@ -3,16 +3,20 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import CustomerForm from './pages/CustomerForm.jsx';
 import AdminPanel from './pages/AdminPanel.jsx';
-import './App.css'
+import Dashboard from './pages/Dashboard.jsx';
+import UserOrders from './pages/UserOrders';
 
 function App() {
   return (
     <Router>
-      <div className="app-container">
+      <div className="w-full max-w-7xl mx-auto p-4">
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin" element={<AdminPanel />} />
           <Route path="/" element={<CustomerForm />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/admin" element={<AdminPanel />} />
+          <Route path="/orders" element={<UserOrders />} />
         </Routes>
       </div>
     </Router>

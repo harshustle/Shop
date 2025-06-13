@@ -9,6 +9,9 @@ const orderSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    email: {
+        type: String
+    },
     address: {
         type: String,
         required: true
@@ -26,7 +29,7 @@ const orderSchema = new mongoose.Schema({
     }],
     status: {
         type: String,
-        enum: ['pending', 'packed'],
+        enum: ['pending', 'packed', 'out_for_delivery', 'delivered'],
         default: 'pending'
     },
     createdAt: {
