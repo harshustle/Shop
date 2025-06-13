@@ -1,41 +1,33 @@
-import axios from 'axios';
+import api from '../api/axios'; // Custom axios instance
 
-const API_URL = '/api/users/';
-
-// Register user
+// ✅ Register user
 const register = async (phone, password) => {
-    const response = await axios.post(API_URL + 'register', {
-        phone,
-        password
-    });
-    return response.data;
+  const response = await api.post('register', { phone, password });
+  return response.data;
 };
 
-// Login user
+// ✅ Login user
 const login = async (phone, password) => {
-    const response = await axios.post(API_URL + 'login', {
-        phone,
-        password
-    });
-    if (response.data.token) {
-        localStorage.setItem('user', JSON.stringify(response.data));
-    }
-    return response.data;
+  const response = await api.post('login', { phone, password });
+  if (response.data.token) {
+    localStorage.setItem('user', JSON.stringify(response.data));
+  }
+  return response.data;
 };
 
-// Logout user
+// ✅ Logout user
 const logout = () => {
-    localStorage.removeItem('user');
+  localStorage.removeItem('user');
 };
 
-// Get logged in user
+// ✅ Get current user
 const getCurrentUser = () => {
-    return JSON.parse(localStorage.getItem('user'));
+  return JSON.parse(localStorage.getItem('user'));
 };
 
 export {
-    register,
-    login,
-    logout,
-    getCurrentUser
+  register,
+  login,
+  logout,
+  getCurrentUser
 };
