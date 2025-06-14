@@ -53,7 +53,6 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Registration logic here
         setError('');
         try {
             if (!formData.phone || !formData.password) {
@@ -70,14 +69,21 @@ const Register = () => {
                 body: JSON.stringify(formData)
             });
 
+            const data = await response.json();
+            
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'Registration failed');
+                throw new Error(data.message || 'Registration failed');
             }
 
-            const data = await response.json();
             localStorage.setItem('token', data.token);
-            navigate('/dashboard');
+            localStorage.setItem('userPhone', formData.phone);
+            localStorage.setItem('role', data.role);
+            
+            if (data.role === 'admin') {
+                navigate('/admin');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (err) {
             setError(err.message);
         }
