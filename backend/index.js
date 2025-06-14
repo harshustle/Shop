@@ -20,7 +20,8 @@ console.log('Environment:', {
 // ✅ CORS setup using .env
 const allowedOrigins = [
   'http://localhost:3000',
-  process.env.FRONTEND_URL // Use value from .env for Render frontend
+  'http://localhost:5173',
+  'https://shop-1-au9v.onrender.com'
 ];
 
 app.use(cors({

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../config';
 import DashboardNavbar from '../components/DashboardNavbar';
 
 const Dashboard = () => {
@@ -21,7 +22,7 @@ const Dashboard = () => {
 
       try {
         console.log('Fetching orders for:', userPhone); // Debug log
-        const response = await fetch(`http://localhost:3000/api/orders/user/${userPhone}`, {
+        const response = await fetch(`${API_URL}/api/orders/user/${userPhone}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
