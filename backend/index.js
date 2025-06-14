@@ -2,6 +2,7 @@ require('dotenv').config({ path: '.env' });
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const path = require('path'); // ✅ Import path module
 const orderRoutes = require('./routes/orderRoutes');
 const authRoutes = require('./routes/authRoutes');
 const { connectDB } = require('./config/db');
@@ -9,19 +10,18 @@ const { connectDB } = require('./config/db');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-console.log('MongoDB URI:', process.env.MONGODB_URI); // Add this debug log
-
-// Add debug logging
+// ✅ Debug logs
+console.log('MongoDB URI:', process.env.MONGODB_URI);
 console.log('Environment:', {
   MONGODB_URI: process.env.MONGODB_URI,
   NODE_ENV: process.env.NODE_ENV
 });
 
-// ✅ CORS setup using .env
+// ✅ CORS setup
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://shop-1-au9v.onrender.com'
+  'https://shop-client-v1kw.onrender.com'
 ];
 
 app.use(cors({
@@ -36,13 +36,12 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 
-// ✅ Basic pages
-app.get('/orders', (req, res) => {
-  res.send('Orders page');
-});
+// ✅ Serve static React files (assuming build is in client/dist)
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
-app.get('/', (req, res) => {
-  res.send('Welcome to the Order Management System');
+// ✅ React routing fallback (this fixes the /login 404 issue)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
 });
 
 // ✅ Global Error Handler
@@ -54,7 +53,7 @@ app.use((err, req, res, next) => {
 // ✅ Connect to MongoDB
 connectDB();
 
-// ✅ Start the server
+// ✅ Start server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
