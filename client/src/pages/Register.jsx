@@ -62,7 +62,7 @@ const Register = () => {
             if (formData.phone.length !== 10) {
                 throw new Error('Phone number must be 10 digits');
             }
-            const response = await fetch('https://shop-client-v1kw.onrender.com/api/auth/register', {
+            const response = await fetch('https://shop-backend-t6k1.onrender.com/api/auth/register', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
