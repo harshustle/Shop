@@ -57,9 +57,20 @@ const createOrder = async (req, res) => {
             }
         }
 
+        const Coupon = require('../models/Coupon');
+        const Product = require('../models/Product');
+
         const taxAmount = parseFloat((subtotal * 0.05).toFixed(2));
-        const shippingFee = subtotal > 1000 ? 0.00 : 50.00;
-        const totalAmount = parseFloat((subtotal + taxAmount + shippingFee).toFixed(2));
+        const discount = Number(req.body.discountAmount) || 0;
+        const coupon = req.body.couponCode || null;
+        const pMethod = req.body.paymentMethod || 'cod';
+        const pStatus = req.body.paymentStatus || (pMethod === 'cod' ? 'unpaid' : 'paid');
+        const calculatedShipping = req.body.shippingFee !== undefined 
+            ? Number(req.body.shippingFee) 
+            : (subtotal >= 499 ? 0.00 : 40.00);
+        const finalTotal = req.body.totalAmount 
+            ? Number(req.body.totalAmount) 
+            : Math.max(0, parseFloat((subtotal + calculatedShipping - discount).toFixed(2)));
 
         const order = await Order.create({
             orderNumber,
@@ -72,12 +83,33 @@ const createOrder = async (req, res) => {
             items: snapshotItems,
             subtotal,
             taxAmount,
-            shippingFee,
-            totalAmount,
+            shippingFee: calculatedShipping,
+            discountAmount: discount,
+            couponCode: coupon,
+            paymentMethod: pMethod,
+            totalAmount: finalTotal,
             status,
             orderStatus: status,
-            paymentStatus: 'unpaid'
+            paymentStatus: pStatus
         });
+
+        // Deduct inventory stock in Product collection
+        for (const item of snapshotItems) {
+            if (item.skuSnapshot && item.skuSnapshot !== 'SKU-DIRECT') {
+                await Product.updateOne(
+                    { "variants.sku": item.skuSnapshot },
+                    { $inc: { "variants.$.stockQuantity": -item.quantity } }
+                ).catch(() => {});
+            }
+        }
+
+        // Increment coupon usage count if applied
+        if (coupon) {
+            await Coupon.updateOne(
+                { code: coupon.toUpperCase() },
+                { $inc: { usedCount: 1 } }
+            ).catch(() => {});
+        }
 
         res.status(201).json(order);
     } catch (error) {

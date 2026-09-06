@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_URL } from '../config';
 
 const CartContext = createContext();
 
 export const CartProvider = ({ children }) => {
   const [items, setItems] = useState(() => {
     try {
-      const saved = localStorage.getItem('blinkit_cart');
+      const saved = localStorage.getItem('freshcart_cart') || localStorage.getItem('blinkit_cart');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];
@@ -14,56 +15,55 @@ export const CartProvider = ({ children }) => {
 
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState(null); // { code, discountAmount, discountType, message }
+
   const [selectedLocation, setSelectedLocation] = useState(() => {
     try {
-      const saved = localStorage.getItem('blinkit_location');
+      const saved = localStorage.getItem('freshcart_location');
       return saved ? JSON.parse(saved) : {
         tag: 'Home',
-        address: 'Flat 402, Green Glen Layout, Bellandur, Bangalore - 560103'
+        address: 'Flat 402, Royal Residency, Gomti Nagar, Lucknow - 226010'
       };
     } catch (e) {
       return {
         tag: 'Home',
-        address: 'Flat 402, Green Glen Layout, Bellandur, Bangalore - 560103'
+        address: 'Flat 402, Royal Residency, Gomti Nagar, Lucknow - 226010'
       };
     }
   });
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-
   // Save to localStorage whenever items change
   useEffect(() => {
     try {
-      localStorage.setItem('blinkit_cart', JSON.stringify(items));
+      localStorage.setItem('freshcart_cart', JSON.stringify(items));
     } catch (e) {}
   }, [items]);
 
   useEffect(() => {
     try {
-      localStorage.setItem('blinkit_location', JSON.stringify(selectedLocation));
+      localStorage.setItem('freshcart_location', JSON.stringify(selectedLocation));
     } catch (e) {}
   }, [selectedLocation]);
 
   /**
    * Adds product & variant to cart
    */
-  const addToCart = (product, variant) => {
+  const addToCart = (product, variant, qty = 1) => {
     setItems(prevItems => {
       const variantId = variant?._id || variant?.variant_id || variant?.sku || product._id;
       const existingIndex = prevItems.findIndex(it => it.variantId === variantId);
 
-      const price = variant?.price || product.basePrice || product.price || 299;
-      const comparePrice = variant?.compareAtPrice || product.compareAtPrice || Math.round(price * 1.25);
+      const price = Number(variant?.price || product.basePrice || product.price || 99);
+      const comparePrice = Number(variant?.compareAtPrice || product.compareAtPrice || Math.round(price * 1.25));
       const title = product.title || product.productName || 'Product';
-      const image = product.images?.[0]?.imageUrl || product.primary_image?.image_url || product.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=400&q=80';
+      const image = product.images?.[0]?.imageUrl || product.image || 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80';
       const attributes = variant?.attributes || {};
 
       if (existingIndex > -1) {
         const updated = [...prevItems];
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + 1
+          quantity: updated[existingIndex].quantity + qty
         };
         return updated;
       }
@@ -79,7 +79,7 @@ export const CartProvider = ({ children }) => {
           comparePrice,
           image,
           attributes,
-          quantity: 1
+          quantity: qty
         }
       ];
     });
@@ -106,18 +106,11 @@ export const CartProvider = ({ children }) => {
   };
 
   /**
-   * Gets current quantity for a variant
-   */
-  const getItemQuantity = (variantId) => {
-    const item = items.find(it => it.variantId === variantId);
-    return item ? item.quantity : 0;
-  };
-
-  /**
    * Clears cart
    */
   const clearCart = () => {
     setItems([]);
+    setAppliedCoupon(null);
   };
 
   // Computations
@@ -126,7 +119,44 @@ export const CartProvider = ({ children }) => {
   const totalSavings = items.reduce((sum, it) => sum + ((it.comparePrice - it.price) * it.quantity), 0);
   const deliveryFee = itemTotal >= 499 || itemTotal === 0 ? 0 : 25;
   const platformFee = itemTotal > 0 ? 2 : 0;
-  const grandTotal = itemTotal + deliveryFee + platformFee;
+  
+  const couponDiscount = appliedCoupon ? Math.min(appliedCoupon.discountAmount, itemTotal) : 0;
+  const grandTotal = Math.max(0, itemTotal - couponDiscount + deliveryFee + platformFee);
+
+  /**
+   * Apply coupon code via backend API
+   */
+  const applyCouponCode = async (code) => {
+    try {
+      const res = await fetch(`${API_URL}/api/coupons/apply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, subtotal: itemTotal })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAppliedCoupon({
+          code: data.code,
+          discountAmount: data.discountAmount,
+          discountType: data.discountType,
+          discountValue: data.discountValue,
+          message: data.message
+        });
+        return { success: true, message: data.message };
+      } else {
+        return { success: false, message: data.error || 'Invalid coupon code' };
+      }
+    } catch (err) {
+      return { success: false, message: 'Could not connect to coupon service' };
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+  };
+
+  const getCartCount = () => itemCount;
+  const getCartTotal = () => grandTotal;
 
   return (
     <CartContext.Provider
@@ -137,21 +167,22 @@ export const CartProvider = ({ children }) => {
         totalSavings: Math.max(0, totalSavings),
         deliveryFee,
         platformFee,
+        appliedCoupon,
+        couponDiscount,
         grandTotal,
         addToCart,
         removeFromCart,
-        getItemQuantity,
         clearCart,
+        applyCouponCode,
+        removeCoupon,
+        getCartCount,
+        getCartTotal,
         isCartOpen,
         setIsCartOpen,
         isCheckoutOpen,
         setIsCheckoutOpen,
         selectedLocation,
-        setSelectedLocation,
-        searchQuery,
-        setSearchQuery,
-        selectedCategory,
-        setSelectedCategory
+        setSelectedLocation
       }}
     >
       {children}

@@ -4,7 +4,8 @@ const auth = require('../middleware/auth');
 const {
     getAdminMetrics,
     getCustomers,
-    deleteCustomer
+    deleteCustomer,
+    updateAdminProfile
 } = require('../controllers/adminController');
 
 // Super Admin check middleware
@@ -20,5 +21,6 @@ router.use(auth, superAdminOnly);
 router.get('/metrics', getAdminMetrics);
 router.get('/customers', getCustomers);
 router.delete('/customers/:id', deleteCustomer);
+router.put('/profile', updateAdminProfile);
 
 module.exports = router;

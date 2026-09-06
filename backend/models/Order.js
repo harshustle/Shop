@@ -97,6 +97,18 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    couponCode: {
+        type: String,
+        default: null
+    },
+    discountAmount: {
+        type: Number,
+        default: 0
+    },
+    paymentMethod: {
+        type: String,
+        default: 'cod'
+    },
     // Both status and orderStatus supported for full compatibility
     status: {
         type: String,

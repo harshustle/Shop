@@ -15,6 +15,10 @@ const cartRoutes = require('./routes/cartRoutes');
 const checkoutRoutes = require('./routes/checkoutRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const couponRoutes = require('./routes/couponRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
+const bannerRoutes = require('./routes/bannerRoutes');
+const accountRoutes = require('./routes/accountRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -60,6 +64,10 @@ app.use('/api/products', catalogRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/checkout', checkoutRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/banners', bannerRoutes);
+app.use('/api/account', accountRoutes);
 
 // Static assets (client build if exists)
 const clientDistPath = path.join(__dirname, '../client/dist');

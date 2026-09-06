@@ -1,16 +1,29 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Phone, Lock, ArrowRight, ShieldCheck, Sparkles, Loader2, KeyRound, CheckCircle2, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { Phone, Lock, ArrowRight, ShieldCheck, Sparkles, Loader2, KeyRound, CheckCircle2, X, ShoppingBag, UserCheck, AlertCircle } from 'lucide-react';
 import { API_URL } from '../config';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Redirect if already authenticated as admin
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    if (token && role === 'admin') {
+      navigate('/admin', { replace: true });
+    }
+  }, [navigate]);
+
+  const [activePortal, setActivePortal] = useState('admin'); // 'admin' | 'customer'
   const [formData, setFormData] = useState({
-    phone: '',
-    password: ''
+    phone: '9161955178',
+    password: 'admin'
   });
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState(location.state?.message || '');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
 
   // OTP Password Reset Modal State
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -23,9 +36,26 @@ const Login = () => {
   const [otpSuccess, setOtpSuccess] = useState('');
   const [isOtpLoading, setIsOtpLoading] = useState(false);
 
+  const handlePortalSwitch = (portal) => {
+    setActivePortal(portal);
+    setError('');
+    if (portal === 'admin') {
+      setFormData({
+        phone: '9161955178',
+        password: 'admin'
+      });
+    } else {
+      setFormData({
+        phone: '',
+        password: ''
+      });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setInfoMessage('');
     setIsLoading(true);
 
     try {
@@ -43,24 +73,32 @@ const Login = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userPhone', formData.phone);
         localStorage.setItem('role', data.role);
-        localStorage.setItem('fullName', data.user?.fullName || (data.role === 'admin' ? 'Harsh Srivastava' : 'Customer'));
+        localStorage.setItem('fullName', data.user?.fullName || (data.role === 'admin' ? 'Admin User' : 'Customer'));
+        if (data.user?.email) {
+          localStorage.setItem('adminEmail', data.user.email);
+        }
 
         if (data.role === 'admin') {
           navigate('/admin');
         } else {
+          if (activePortal === 'admin') {
+            setError('Notice: This account does not possess Super Admin privileges.');
+            return;
+          }
           navigate('/');
         }
       } else {
-        setError(data.error || 'Login failed. Please verify credentials.');
+        setError(data.error || 'Login failed. Please verify your credentials.');
       }
     } catch (err) {
-      setError('Could not connect to backend server. Ensure backend is running.');
+      setError('Could not connect to backend server. Please verify backend is running.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const fillAdminCredentials = () => {
+    setActivePortal('admin');
     setFormData({
       phone: '9161955178',
       password: 'admin'
@@ -120,7 +158,7 @@ const Login = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userPhone', otpPhone);
         localStorage.setItem('role', data.role);
-        localStorage.setItem('fullName', data.user?.fullName || (data.role === 'admin' ? 'Harsh Srivastava' : 'Customer'));
+        localStorage.setItem('fullName', data.user?.fullName || (data.role === 'admin' ? 'Admin User' : 'Customer'));
 
         setTimeout(() => {
           if (data.role === 'admin') {
@@ -140,53 +178,104 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F6FB] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F4F7FB] flex flex-col items-center justify-center p-4">
       
-      {/* Brand Logo Header */}
+      {/* Brand Header */}
       <div className="mb-6 text-center">
-        <Link to="/" className="inline-flex items-baseline tracking-tighter">
-          <span className="text-4xl font-black text-black">blink</span>
-          <span className="text-4xl font-black text-[#0C831F]">it</span>
-          <span className="w-3 h-3 rounded-full bg-[#F7D02C] ml-0.5"></span>
-        </Link>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-1">India's Last Minute App</p>
+        <div className="inline-flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-[#00B074] flex items-center justify-center shadow-lg shadow-[#00B074]/20 text-white">
+            <ShoppingBag size={24} strokeWidth={2.4} />
+          </div>
+          <span className="text-3xl font-black text-slate-900 tracking-tight">FreshCart</span>
+        </div>
+        <p className="text-xs font-semibold text-slate-500 mt-1.5 tracking-wide">
+          Enterprise Grocery & Super Admin Platform
+        </p>
       </div>
 
       {/* Login Card */}
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-gray-100 shadow-xl relative">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-black text-gray-900">Welcome Back</h2>
-          <span className="px-2.5 py-0.5 bg-emerald-50 text-[#0C831F] text-[10px] font-black rounded-full uppercase">
-            ⚡ 10 Min Delivery
+      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 relative">
+        
+        {/* Portal Switch Tabs */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-2xl mb-6 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => handlePortalSwitch('admin')}
+            className={`py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
+              activePortal === 'admin'
+                ? 'bg-white text-[#00B074] shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldCheck size={15} />
+            <span>Super Admin</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePortalSwitch('customer')}
+            className={`py-2 rounded-xl transition flex items-center justify-center gap-1.5 ${
+              activePortal === 'customer'
+                ? 'bg-white text-slate-900 shadow-xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <UserCheck size={15} />
+            <span>Customer</span>
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-xl font-black text-slate-900">
+            {activePortal === 'admin' ? 'Super Admin Portal' : 'Customer Sign In'}
+          </h2>
+          <span className={`px-2.5 py-0.5 text-[10px] font-black rounded-full uppercase ${
+            activePortal === 'admin' 
+              ? 'bg-[#E8F8F0] text-[#00B074]' 
+              : 'bg-blue-50 text-blue-600'
+          }`}>
+            {activePortal === 'admin' ? 'Restricted Access' : 'Quick Order'}
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-6">Enter your mobile number and password to access your quick cart and order history.</p>
+        <p className="text-xs text-slate-500 mb-5">
+          {activePortal === 'admin' 
+            ? 'Access complete real-time performance, inventory, orders, and sales metrics.'
+            : 'Enter your phone number and password to manage your cart and past orders.'}
+        </p>
+
+        {infoMessage && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200/70 rounded-2xl text-xs text-amber-800 font-semibold flex items-center gap-2">
+            <AlertCircle size={16} className="shrink-0 text-amber-600" />
+            <span>{infoMessage}</span>
+          </div>
+        )}
 
         {error && (
-          <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-600 font-bold">
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-bold">
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Mobile Number</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              {activePortal === 'admin' ? 'Admin Mobile / ID' : 'Mobile Number'}
+            </label>
             <div className="relative">
-              <Phone size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+              <Phone size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type="tel"
                 required
-                placeholder="10-digit mobile number"
+                placeholder="e.g. 9161955178"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]/30 focus:border-[#0C831F]"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-bold text-gray-700">Password</label>
+              <label className="block text-xs font-bold text-slate-700">Password</label>
               <button
                 type="button"
                 onClick={() => {
@@ -196,20 +285,20 @@ const Login = () => {
                   setOtpSuccess('');
                   setShowOtpModal(true);
                 }}
-                className="text-[11px] font-bold text-amber-700 hover:text-amber-800 hover:underline"
+                className="text-[11px] font-bold text-[#00B074] hover:underline"
               >
-                Forgot Password? (Reset via OTP)
+                Forgot Password?
               </button>
             </div>
             <div className="relative">
-              <Lock size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+              <Lock size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type="password"
                 required
                 placeholder="Enter password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]/30 focus:border-[#0C831F]"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
               />
             </div>
           </div>
@@ -217,93 +306,93 @@ const Login = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 bg-[#0C831F] text-white rounded-2xl font-black text-sm hover:bg-[#0A6E1A] transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-2"
+            className="w-full py-3.5 bg-[#00B074] text-white rounded-2xl font-black text-sm hover:bg-[#009663] transition shadow-lg shadow-[#00B074]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-3"
           >
             {isLoading ? (
               <>
                 <Loader2 size={18} className="animate-spin" />
-                <span>Logging In...</span>
+                <span>Authenticating...</span>
               </>
             ) : (
               <>
-                <span>Continue</span>
+                <span>Sign In to Dashboard</span>
                 <ArrowRight size={16} />
               </>
             )}
           </button>
         </form>
 
-        {/* Quick Demo Admin Login Pill */}
-        <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+        {/* 1-Click Super Admin Fill */}
+        <div className="mt-6 pt-4 border-t border-slate-100 text-center">
           <button
             type="button"
             onClick={fillAdminCredentials}
-            className="text-[11px] text-amber-800 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl font-bold transition inline-flex items-center gap-1.5"
+            className="text-xs text-[#00B074] bg-[#E8F8F0] hover:bg-emerald-100 px-3.5 py-2 rounded-xl font-bold transition inline-flex items-center gap-1.5"
           >
-            <Sparkles size={13} className="text-amber-600" />
-            <span>Fill Admin Credentials (9161955178)</span>
+            <Sparkles size={14} className="text-[#00B074]" />
+            <span>Auto-fill Super Admin (9161955178 / admin)</span>
           </button>
         </div>
 
         <div className="mt-4 text-center">
-          <p className="text-xs text-gray-500">
-            Don't have an account?{' '}
-            <Link to="/register" className="font-bold text-[#0C831F] hover:underline">
-              Register now
+          <p className="text-xs text-slate-500">
+            Need a buyer account?{' '}
+            <Link to="/register" className="font-bold text-[#00B074] hover:underline">
+              Create Customer Account
             </Link>
           </p>
         </div>
 
       </div>
 
-      {/* OTP PASSWORD RESET MODAL (For SuperAdmin AND Normal Customers) */}
+      {/* OTP Password Reset Modal */}
       {showOtpModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100 relative">
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
             <button
               onClick={() => setShowOtpModal(false)}
-              className="absolute right-4 top-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition"
+              className="absolute right-4 top-4 p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
             >
               <X size={18} />
             </button>
 
             <div className="flex items-center gap-2.5 mb-2">
-              <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700">
-                <KeyRound size={18} />
+              <div className="w-10 h-10 rounded-2xl bg-[#E8F8F0] flex items-center justify-center text-[#00B074]">
+                <KeyRound size={20} />
               </div>
               <div>
-                <h3 className="text-base font-black text-gray-900">OTP Password Reset</h3>
-                <p className="text-[11px] text-gray-400 font-medium">Valid for SuperAdmin & Customer accounts</p>
+                <h3 className="text-base font-black text-slate-900">OTP Password Reset</h3>
+                <p className="text-[11px] text-slate-400 font-medium">Valid for Super Admin & Customer accounts</p>
               </div>
             </div>
 
             {otpError && (
-              <div className="my-3 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-600 font-bold">
+              <div className="my-3 p-3 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-bold">
                 {otpError}
               </div>
             )}
 
             {otpSuccess && (
-              <div className="my-3 p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-xs text-emerald-700 font-bold flex items-center gap-2">
-                <CheckCircle2 size={16} className="shrink-0 text-emerald-600" />
+              <div className="my-3 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-xs text-[#00B074] font-bold flex items-center gap-2">
+                <CheckCircle2 size={16} className="shrink-0 text-[#00B074]" />
                 <span>{otpSuccess}</span>
               </div>
             )}
 
-            {/* STEP 1: Enter Mobile to Request OTP */}
+            {/* STEP 1 */}
             {otpStep === 1 && (
               <form onSubmit={handleSendOtp} className="space-y-4 mt-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Enter Registered Mobile Number</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Enter Registered Mobile Number</label>
                   <div className="relative">
-                    <Phone size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+                    <Phone size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
                     <input
                       type="tel"
                       required
                       placeholder="10-digit mobile number"
                       value={otpPhone}
                       onChange={(e) => setOtpPhone(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
                     />
                   </div>
                 </div>
@@ -312,7 +401,7 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setOtpPhone('9161955178')}
-                    className="text-[11px] text-amber-700 font-bold hover:underline"
+                    className="text-[11px] text-[#00B074] font-bold hover:underline"
                   >
                     Use Admin Mobile (9161955178)
                   </button>
@@ -321,7 +410,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isOtpLoading}
-                  className="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl font-black text-xs transition shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isOtpLoading ? (
                     <>
@@ -335,19 +424,19 @@ const Login = () => {
               </form>
             )}
 
-            {/* STEP 2: Enter OTP & New Password */}
+            {/* STEP 2 */}
             {otpStep === 2 && (
               <form onSubmit={handleVerifyOtpAndReset} className="space-y-4 mt-4">
                 {generatedOtp && (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-center">
-                    <p className="text-[11px] font-bold text-amber-800">Demo Verification OTP Code:</p>
-                    <p className="text-xl font-mono font-black text-amber-900 tracking-widest mt-0.5">{generatedOtp}</p>
-                    <p className="text-[10px] text-amber-700 mt-0.5">Valid for 10 minutes</p>
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
+                    <p className="text-[11px] font-bold text-emerald-800">Verification OTP Code:</p>
+                    <p className="text-2xl font-mono font-black text-[#00B074] tracking-widest mt-0.5">{generatedOtp}</p>
+                    <p className="text-[10px] text-emerald-700 mt-0.5">Valid for 10 minutes</p>
                   </div>
                 )}
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Enter 6-Digit OTP *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Enter 6-Digit OTP *</label>
                   <input
                     type="text"
                     required
@@ -355,19 +444,19 @@ const Login = () => {
                     placeholder="e.g. 123456"
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
-                    className="w-full text-center tracking-widest font-mono text-lg font-bold py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    className="w-full text-center tracking-widest font-mono text-lg font-bold py-2.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#00B074]/30"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-700 mb-1">Set New Password *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Set New Password *</label>
                   <input
                     type="password"
                     required
                     placeholder="Enter new password (min 4 characters)"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30"
                   />
                 </div>
 
@@ -375,14 +464,14 @@ const Login = () => {
                   <button
                     type="button"
                     onClick={() => setOtpStep(1)}
-                    className="text-gray-500 font-bold hover:underline text-[11px]"
+                    className="text-slate-500 font-bold hover:underline text-[11px]"
                   >
                     ← Change Mobile Number
                   </button>
                   <button
                     type="button"
                     onClick={handleSendOtp}
-                    className="text-amber-700 font-bold hover:underline text-[11px]"
+                    className="text-[#00B074] font-bold hover:underline text-[11px]"
                   >
                     Resend OTP
                   </button>
@@ -391,7 +480,7 @@ const Login = () => {
                 <button
                   type="submit"
                   disabled={isOtpLoading}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl font-black text-xs transition shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {isOtpLoading ? (
                     <>

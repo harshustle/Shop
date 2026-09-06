@@ -1,6 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
+import Home from './pages/Home';
+import Shop from './pages/Shop';
+import ProductDetail from './pages/ProductDetail';
+import CustomerAccount from './pages/CustomerAccount';
 import CustomerForm from './pages/CustomerForm';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -12,12 +16,45 @@ function App() {
   return (
     <CartProvider>
       <Router>
-        <div className="min-h-screen bg-[#F4F6FB] text-slate-800">
+        <div className="min-h-screen bg-[#F4F6FB] text-slate-800 font-sans antialiased">
           <Routes>
-            <Route path="/" element={<CustomerForm />} />
+            {/* Storefront Customer Routes */}
+            <Route path="/" element={<Home />} />
+            <Route path="/shop" element={<Shop />} />
+            <Route path="/product/:slug" element={<ProductDetail />} />
+            <Route
+              path="/account"
+              element={
+                <ProtectedRoute>
+                  <CustomerAccount />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/orders"
+              element={
+                <ProtectedRoute>
+                  <CustomerAccount />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <CustomerAccount />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Legacy Blinkit Storefront Catalog */}
+            <Route path="/legacy" element={<CustomerForm />} />
+
+            {/* Authentication */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<ProtectedRoute><UserOrders /></ProtectedRoute>} />
+
+            {/* Super Admin Dashboard */}
             <Route
               path="/admin"
               element={
@@ -26,7 +63,9 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="/orders" element={<ProtectedRoute><UserOrders /></ProtectedRoute>} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
       </Router>
