@@ -3,13 +3,21 @@ const Category = require('../models/Category');
 const SearchService = require('../services/searchService');
 const InventoryService = require('../services/inventoryService');
 const CsvIngestionService = require('../services/csvIngestionService');
+const redisService = require('../services/redisService');
 
 /**
- * UC-1: Search & Filter Catalog with Facets in MongoDB
+ * UC-1: Search & Filter Catalog with Facets in MongoDB (Cached in Redis)
  */
 const searchCatalog = async (req, res) => {
     try {
+        const cacheKey = `cache:catalog:search:${JSON.stringify(req.query || {})}`;
+        const cached = await redisService.get(cacheKey);
+        if (cached) {
+            return res.json(cached);
+        }
+
         const results = await SearchService.searchProducts(req.query);
+        await redisService.set(cacheKey, results, 60); // 60-second hot cache
         res.json(results);
     } catch (error) {
         console.error('MongoDB Catalog search error:', error);
@@ -18,13 +26,22 @@ const searchCatalog = async (req, res) => {
 };
 
 /**
- * Get category list
+ * Get category list (Cached in Redis for 5 minutes)
  */
 const getCategories = async (req, res) => {
     try {
+        const cacheKey = 'cache:categories:active';
+        const cached = await redisService.get(cacheKey);
+        if (cached) {
+            return res.json(cached);
+        }
+
         const categories = await Category.find({ isActive: true })
             .populate('parent', 'name slug categoryId')
-            .sort({ categoryId: 1, name: 1 });
+            .sort({ categoryId: 1, name: 1 })
+            .lean();
+
+        await redisService.set(cacheKey, categories, 300); // 5-minute TTL
         res.json(categories);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -135,6 +152,9 @@ const createProduct = async (req, res) => {
             images: normalizedImages
         });
 
+        // Invalidate catalog search cache
+        await redisService.flushPattern('cache:catalog:*').catch(() => {});
+
         res.status(201).json(product);
     } catch (error) {
         console.error('Create product error:', error);
@@ -149,6 +169,7 @@ const updateProduct = async (req, res) => {
         if (!product) {
             return res.status(404).json({ error: 'Product not found' });
         }
+        await redisService.flushPattern('cache:catalog:*').catch(() => {});
         res.json(product);
     } catch (error) {
         res.status(400).json({ error: error.message });

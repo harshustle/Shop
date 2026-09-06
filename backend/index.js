@@ -19,6 +19,7 @@ const couponRoutes = require('./routes/couponRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
 const accountRoutes = require('./routes/accountRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -45,6 +46,9 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve local upload assets if stored locally
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Health Check
 app.get('/api/health', (req, res) => {
   res.json({
@@ -68,6 +72,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/account', accountRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Static assets (client build if exists)
 const clientDistPath = path.join(__dirname, '../client/dist');

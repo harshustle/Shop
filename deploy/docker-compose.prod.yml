@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  # Node.js API Service
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: freshcart-api
+    restart: always
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - AWS_REGION=${AWS_REGION:-ap-south-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    volumes:
+      - ../backend/uploads:/var/www/freshcart/backend/uploads
+    depends_on:
+      - redis
+    networks:
+      - freshcart-network
+
+  # Redis In-Memory Cache
+  redis:
+    image: redis:7-alpine
+    container_name: freshcart-redis
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-data:/data
+    networks:
+      - freshcart-network
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: freshcart-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../client/dist:/var/www/freshcart/client/dist:ro
+      - ../backend/uploads:/var/www/freshcart/backend/uploads:ro
+    depends_on:
+      - api
+    networks:
+      - freshcart-network
+
+networks:
+  freshcart-network:
+    driver: bridge
+
+volumes:
+  redis-data:

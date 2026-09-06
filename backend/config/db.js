@@ -4,12 +4,13 @@ const fs = require('fs');
 
 let isConnected = false;
 
-// Production Mongoose Configuration
+// Production Mongoose Configuration (Tuned for 5,000 Concurrent Users)
 const mongooseOptions = {
     serverSelectionTimeoutMS: 8000,
     socketTimeoutMS: 45000,
-    maxPoolSize: 50,
-    minPoolSize: 10,
+    maxPoolSize: 100, // 100 pooled connections per worker process
+    minPoolSize: 25,  // Pre-warmed hot connections to prevent cold-start latency
+    maxIdleTimeMS: 30000,
     family: 4 // IPv4
 };
 

@@ -1,5 +1,6 @@
 const Address = require('../models/Address');
 const User = require('../models/User');
+const Wishlist = require('../models/Wishlist');
 
 /**
  * Get customer profile & saved addresses
@@ -7,17 +8,20 @@ const User = require('../models/User');
  */
 const getAccountDetails = async (req, res) => {
     try {
-        const [user, addresses] = await Promise.all([
+        const [user, addresses, wishlistDoc] = await Promise.all([
             User.findById(req.userId).select('-password'),
-            Address.find({ userId: req.userId }).sort({ isDefault: -1, createdAt: -1 })
+            Address.find({ userId: req.userId }).sort({ isDefault: -1, createdAt: -1 }),
+            Wishlist.findOne({ userId: req.userId })
         ]);
 
         if (!user) return res.status(404).json({ error: 'User account not found' });
 
+        const activeWishlist = wishlistDoc?.products?.map(p => p.toString()) || user.metadata?.wishlist || [];
+
         res.json({
             user: user.toSafeJSON(),
             addresses: addresses || [],
-            wishlist: user.metadata?.wishlist || []
+            wishlist: activeWishlist
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -116,6 +120,13 @@ const toggleWishlist = async (req, res) => {
         user.metadata.wishlist = wishlist;
         user.markModified('metadata');
         await user.save();
+
+        // Also persist to dedicated Wishlist collection
+        await Wishlist.findOneAndUpdate(
+            { userId: req.userId },
+            { products: wishlist },
+            { upsert: true, new: true }
+        ).catch(err => console.error('Wishlist collection sync error:', err));
 
         res.json({
             success: true,
