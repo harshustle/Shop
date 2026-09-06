@@ -1,40 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const Order = require('../models/Order');
 const { 
     createOrder, 
     getOrders, 
-    updateOrderStatus, 
+    updateOrderStatus,
+    fulfillOrder,
+    trackOrder,
+    getUserOrdersByPhone,
     deleteOrder 
 } = require('../controllers/orderController');
 
-// API Routes
+// Client & API Routes
 router.post('/', createOrder);
 router.get('/', getOrders);
+router.get('/user/:phone', getUserOrdersByPhone);
+router.get('/track/:orderNumber', trackOrder);
+router.patch('/:id/status', updateOrderStatus);
 router.patch('/:id', updateOrderStatus);
-router.patch('/:orderId/status', auth, async (req, res) => {
-    try {
-        const order = await Order.findByIdAndUpdate(
-            req.params.orderId,
-            { status: req.body.status },
-            { new: true }
-        );
-        res.json(order);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to update order status' });
-    }
-});
+router.patch('/:orderId/fulfill', auth, fulfillOrder);
 router.delete('/:id', deleteOrder);
-router.get('/user/:phone', auth, async (req, res) => {
-    try {
-        const orders = await Order.find({ phoneNumber: req.params.phone })
-            .sort({ createdAt: -1 });
-        res.json(orders);
-    } catch (error) {
-        console.error('Error fetching user orders:', error);
-        res.status(500).json({ error: 'Failed to fetch orders' });
-    }
-});
 
 module.exports = router;
