@@ -20,6 +20,7 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
+const logisticsRoutes = require('./routes/logisticsRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -59,7 +60,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API Routes
+// API Routes (Standard & v1 production aliases)
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/orders', orderRoutes);
@@ -73,6 +74,14 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/banners', bannerRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/logistics', logisticsRoutes);
+
+// Aliases for v1 specifications
+app.use('/api/v1/checkout', checkoutRoutes);
+app.use('/api/v1/logistics', logisticsRoutes);
+app.use('/api/v1/upload', uploadRoutes);
+app.use('/api/v1/media', uploadRoutes);
+
 
 // Static assets (client build if exists)
 const clientDistPath = path.join(__dirname, '../client/dist');

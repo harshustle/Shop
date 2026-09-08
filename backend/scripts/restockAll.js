@@ -7,7 +7,13 @@ async function restock() {
   const Product = require('../models/Product');
   const res = await Product.updateMany(
     {},
-    { $set: { "variants.$[].stockQuantity": 100 } }
+    { 
+      $set: { 
+        "variants.$[].stockQuantity": 100,
+        "variants.$[].stockOnHand": 100,
+        "variants.$[].stockAllocated": 0
+      } 
+    }
   );
   console.log('Restocked variants in shop db:', res);
   await mongoose.disconnect();

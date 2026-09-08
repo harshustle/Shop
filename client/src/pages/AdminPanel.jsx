@@ -344,6 +344,38 @@ const AdminPanel = () => {
     }
   };
 
+  // 1-Click In-House Delivery Fleet Dispatch
+  const handleDispatchFleet = async (orderId) => {
+    const rider = prompt('Enter Delivery Fleet Rider Name:', 'Express Rider');
+    if (!rider) return;
+    const vehicle = prompt('Enter Vehicle / Bike Number:', 'Fleet Van 01') || 'Fleet Van 01';
+
+    try {
+      const res = await fetch(`${API_URL}/api/v1/logistics/dispatch`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          orderId,
+          riderName: rider,
+          vehicleNumber: vehicle
+        })
+      });
+      if (res.ok) {
+        fetchData();
+      } else {
+        const d = await res.json();
+        alert(d.error || 'Dispatch failed');
+      }
+    } catch (err) {
+      console.error('Dispatch error', err);
+    }
+  };
+
+  // Open Printable Shipping Slip for Rider
+  const handlePrintLabel = (orderId) => {
+    window.open(`${API_URL}/api/v1/logistics/label/${orderId}`, '_blank', 'width=450,height=650');
+  };
+
   // Quick Restock Handler
   const handleQuickRestock = async (variantId, addedQty = 50) => {
     try {
@@ -1536,10 +1568,22 @@ const AdminPanel = () => {
                     ) : (
                       filteredOrders.map((ord) => (
                         <tr key={ord._id} className="hover:bg-slate-50 transition">
-                          <td className="p-4 font-black text-slate-900">{ord.orderNumber}</td>
+                          <td className="p-4 font-black text-slate-900">
+                            <div>{ord.orderNumber}</div>
+                            {ord.shippingLogistics?.awbCode && (
+                              <span className="text-[10px] font-mono text-[#00B074] bg-[#E8F8F0] px-1.5 py-0.5 rounded font-bold">
+                                {ord.shippingLogistics.awbCode}
+                              </span>
+                            )}
+                          </td>
                           <td className="p-4">
                             <p className="font-bold text-slate-900">{ord.customerName}</p>
                             <p className="text-[11px] text-slate-400 font-medium">{ord.phoneNumber}</p>
+                            {ord.shippingLogistics?.riderName && (
+                              <p className="text-[10px] text-slate-500 font-medium">
+                                🛵 {ord.shippingLogistics.riderName}
+                              </p>
+                            )}
                           </td>
                           <td className="p-4 font-medium text-slate-600">
                             {ord.items && ord.items.length > 0
@@ -1548,6 +1592,9 @@ const AdminPanel = () => {
                           </td>
                           <td className="p-4 font-black text-slate-900">
                             ₹{Number(ord.totalAmount || ord.subtotal || 0).toFixed(2)}
+                            <span className="block text-[10px] uppercase font-bold text-slate-400">
+                              {ord.paymentMethod || 'COD'}
+                            </span>
                           </td>
                           <td className="p-4">
                             <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
@@ -1561,7 +1608,25 @@ const AdminPanel = () => {
                             </span>
                           </td>
                           <td className="p-4 text-right">
-                            <div className="inline-flex items-center gap-1.5">
+                            <div className="inline-flex items-center gap-1.5 flex-wrap justify-end">
+                              <button
+                                onClick={() => handlePrintLabel(ord._id)}
+                                title="Print Rider Shipping Slip"
+                                className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-[10px] transition"
+                              >
+                                🖨️ Label
+                              </button>
+
+                              {(ord.status || ord.orderStatus) !== 'delivered' && (
+                                <button
+                                  onClick={() => handleDispatchFleet(ord._id)}
+                                  title="Assign in-house delivery rider"
+                                  className="px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg font-bold text-[10px] transition"
+                                >
+                                  🛵 Dispatch
+                                </button>
+                              )}
+
                               {(ord.status || ord.orderStatus) === 'pending' && (
                                 <button
                                   onClick={() => handleUpdateOrderStatus(ord._id, 'packed')}

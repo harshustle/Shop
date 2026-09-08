@@ -49,6 +49,22 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    isPhoneVerified: {
+        type: Boolean,
+        default: true
+    },
+    codBlocked: {
+        type: Boolean,
+        default: false
+    },
+    rtoCount: {
+        type: Number,
+        default: 0
+    },
+    totalSpend: {
+        type: Number,
+        default: 0
+    },
     metadata: {
         type: mongoose.Schema.Types.Mixed,
         default: {}

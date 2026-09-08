@@ -30,6 +30,29 @@ const uploadMediaAsset = async (req, res) => {
     }
 };
 
-module.exports = {
-    uploadMediaAsset
+const getPresignedUploadUrl = async (req, res) => {
+    try {
+        const { folder = 'products', filename, mimeType = 'image/webp', expiresInSeconds = 60 } = req.body;
+        if (!filename) {
+            return res.status(400).json({ error: 'filename is required for presigned URL generation' });
+        }
+
+        const presignedResult = await s3Service.generatePresignedPutUrl({
+            folder,
+            filename,
+            mimeType,
+            expiresInSeconds
+        });
+
+        res.json(presignedResult);
+    } catch (error) {
+        console.error('Presigned URL error:', error);
+        res.status(500).json({ error: error.message });
+    }
 };
+
+module.exports = {
+    uploadMediaAsset,
+    getPresignedUploadUrl
+};
+

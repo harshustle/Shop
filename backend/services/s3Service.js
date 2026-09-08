@@ -105,6 +105,65 @@ class S3Service {
     }
 
     /**
+     * Section 8: S3 Direct Presigned PUT URL Generator
+     * Generates a 60-second presigned URL for direct browser-to-S3 uploads,
+     * completely bypassing Node.js server memory and CPU buffers.
+     * 
+     * @param {Object} options
+     * @param {string} options.folder 'products' | 'categories' | 'banners' | 'uploads'
+     * @param {string} options.filename e.g. 'hero-image.webp'
+     * @param {string} options.mimeType e.g. 'image/webp'
+     * @param {number} [options.expiresInSeconds] Default: 60
+     * @returns {Promise<Object>}
+     */
+    async generatePresignedPutUrl({ folder = 'uploads', filename, mimeType = 'image/webp', expiresInSeconds = 60 }) {
+        const cleanFolder = folder.replace(/\/+$/, '');
+        const cleanFilename = `${Date.now()}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+        const key = `${cleanFolder}/${cleanFilename}`;
+
+        if (this.isCloudEnabled && this.s3Client) {
+            try {
+                const { PutObjectCommand } = require('@aws-sdk/client-s3');
+                const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
+                const command = new PutObjectCommand({
+                    Bucket: this.bucket,
+                    Key: key,
+                    ContentType: mimeType
+                });
+
+                const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn: expiresInSeconds });
+                const cdnUrl = process.env.CLOUDFRONT_URL 
+                    ? `${process.env.CLOUDFRONT_URL.replace(/\/+$/, '')}/${key}`
+                    : `https://${this.bucket}.s3.${this.region}.amazonaws.com/${key}`;
+
+                return {
+                    success: true,
+                    mode: 's3',
+                    key,
+                    uploadUrl,
+                    fileUrl: cdnUrl,
+                    expiresIn: expiresInSeconds,
+                    contentType: mimeType
+                };
+            } catch (err) {
+                console.error('[S3Service] Presigned URL generation failed:', err.message);
+            }
+        }
+
+        // Seamless Local Fallback
+        return {
+            success: true,
+            mode: 'local',
+            key,
+            uploadUrl: '/api/v1/uploads',
+            fileUrl: `/uploads/${key}`,
+            expiresIn: 3600,
+            contentType: mimeType
+        };
+    }
+
+    /**
      * Delete file by key
      */
     async deleteFile(key) {

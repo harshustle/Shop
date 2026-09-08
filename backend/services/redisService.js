@@ -123,6 +123,160 @@ class RedisService {
     }
 
     /**
+     * Distributed Lock via SETNX with TTL
+     * Used for Razorpay Webhook Deduplication and Idempotent Mutations
+     * @param {string} key
+     * @param {string|number} value
+     * @param {number} ttlSeconds
+     * @returns {Promise<boolean>} True if lock acquired, false if already locked
+     */
+    async setnx(key, value = '1', ttlSeconds = 60) {
+        if (this.isConnected && this.client) {
+            try {
+                // Redis 'SET key value NX EX ttlSeconds'
+                const res = await this.client.set(key, JSON.stringify(value), 'NX', 'EX', ttlSeconds);
+                return res === 'OK';
+            } catch (err) {
+                console.warn(`[RedisService] SETNX error for key ${key}:`, err.message);
+            }
+        }
+
+        // In-memory atomic SETNX
+        const entry = this.inMemoryCache.get(key);
+        if (entry && (!entry.expiresAt || Date.now() < entry.expiresAt)) {
+            return false; // Already locked
+        }
+
+        const expiresAt = ttlSeconds ? (Date.now() + ttlSeconds * 1000) : null;
+        this.inMemoryCache.set(key, { value, expiresAt });
+        return true;
+    }
+
+    /**
+     * Section 5.1: High-Concurrency Redis Lua Atomic Stock Reservation
+     * Evaluates available stock = (physicalStock - reservedStock) >= requested
+     * If true, increments reserved stock and holds temporary reservation with 15-min TTL.
+     * 
+     * @param {string} sku 
+     * @param {number} requestedQty
+     * @param {number} physicalStock
+     * @param {number} ttlSeconds Default: 900 (15 minutes)
+     * @returns {Promise<{ success: boolean, available: number, reserved: number }>}
+     */
+    async reserveStock(sku, requestedQty, physicalStock, ttlSeconds = 900) {
+        const stockKey = `stock:sku:${sku}`;
+        const reserveKey = `reserve:sku:${sku}`;
+
+        if (this.isConnected && this.client) {
+            try {
+                // Ensure physical stock key is seeded in Redis
+                await this.client.set(stockKey, physicalStock, 'NX');
+
+                // Production Lua Script from Section 5.1
+                const luaScript = `
+                    local stock = tonumber(redis.call('get', KEYS[1]) or ARGV[2])
+                    local reserved = tonumber(redis.call('get', KEYS[2]) or '0')
+                    local requested = tonumber(ARGV[1])
+
+                    if (stock - reserved) >= requested then
+                        local newReserved = redis.call('incrby', KEYS[2], requested)
+                        redis.call('expire', KEYS[2], tonumber(ARGV[3]))
+                        return {1, stock - newReserved, newReserved}
+                    else
+                        return {0, stock - reserved, reserved}
+                    end
+                `;
+
+                const result = await this.client.eval(luaScript, 2, stockKey, reserveKey, requestedQty, physicalStock, ttlSeconds);
+                return {
+                    success: result[0] === 1,
+                    available: Number(result[1]),
+                    reserved: Number(result[2])
+                };
+            } catch (err) {
+                console.warn(`[RedisService] Lua reservation error for SKU ${sku}: ${err.message}. Falling back to memory lock.`);
+            }
+        }
+
+        // In-memory atomic reservation simulation
+        if (!this.inMemoryReservations) {
+            this.inMemoryReservations = new Map();
+        }
+
+        const now = Date.now();
+        const existing = this.inMemoryReservations.get(sku);
+        let activeReserved = 0;
+
+        if (existing) {
+            if (now <= existing.expiresAt) {
+                activeReserved = existing.quantity;
+            } else {
+                this.inMemoryReservations.delete(sku);
+            }
+        }
+
+        const available = Math.max(0, physicalStock - activeReserved);
+        if (available >= requestedQty) {
+            const newReserved = activeReserved + requestedQty;
+            this.inMemoryReservations.set(sku, {
+                quantity: newReserved,
+                expiresAt: now + ttlSeconds * 1000
+            });
+            return {
+                success: true,
+                available: physicalStock - newReserved,
+                reserved: newReserved
+            };
+        } else {
+            return {
+                success: false,
+                available,
+                reserved: activeReserved
+            };
+        }
+    }
+
+    /**
+     * Releases or reduces reserved stock (e.g. on cart abandon or checkout timeout)
+     */
+    async releaseStock(sku, quantity) {
+        const reserveKey = `reserve:sku:${sku}`;
+        if (this.isConnected && this.client) {
+            try {
+                const current = await this.client.get(reserveKey);
+                if (current) {
+                    const newRes = Math.max(0, parseInt(current, 10) - quantity);
+                    await this.client.set(reserveKey, newRes);
+                }
+            } catch (err) {
+                console.warn(`[RedisService] releaseStock error:`, err.message);
+            }
+        }
+
+        if (this.inMemoryReservations && this.inMemoryReservations.has(sku)) {
+            const cur = this.inMemoryReservations.get(sku);
+            const newQty = Math.max(0, cur.quantity - quantity);
+            if (newQty === 0) {
+                this.inMemoryReservations.delete(sku);
+            } else {
+                cur.quantity = newQty;
+            }
+        }
+    }
+
+    /**
+     * Commits reservation upon successful payment
+     */
+    async commitStock(sku, quantity, newPhysicalStock) {
+        await this.releaseStock(sku, quantity);
+        if (this.isConnected && this.client) {
+            try {
+                await this.client.set(`stock:sku:${sku}`, newPhysicalStock);
+            } catch (e) {}
+        }
+    }
+
+    /**
      * Flush cache keys matching pattern
      * @param {string} pattern e.g. 'cache:catalog:*'
      */

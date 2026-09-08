@@ -30,6 +30,27 @@ const variantSchema = new mongoose.Schema({
         default: 0,
         min: 0
     },
+    stockOnHand: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    stockAllocated: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    hsnCode: {
+        type: String,
+        default: '1905',
+        trim: true
+    },
+    taxRatePercent: {
+        type: Number,
+        default: 5,
+        min: 0,
+        max: 28
+    },
     safetyStock: {
         type: Number,
         default: 5
@@ -46,7 +67,28 @@ const variantSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     }
-}, { timestamps: true });
+}, { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Available To Sell virtual = max(0, stockOnHand - stockAllocated)
+variantSchema.virtual('availableToSell').get(function() {
+    const onHand = this.stockOnHand ?? this.stockQuantity ?? 0;
+    const allocated = this.stockAllocated ?? 0;
+    return Math.max(0, onHand - allocated);
+});
+
+// Sync stockQuantity and stockOnHand
+variantSchema.pre('validate', function(next) {
+    if (this.stockOnHand === undefined || this.stockOnHand === 0) {
+        this.stockOnHand = this.stockQuantity || 0;
+    } else if (this.stockQuantity === undefined || this.stockQuantity === 0) {
+        this.stockQuantity = this.stockOnHand || 0;
+    }
+    next();
+});
 
 const imageSchema = new mongoose.Schema({
     imageUrl: {
