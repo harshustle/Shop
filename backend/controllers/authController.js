@@ -49,7 +49,7 @@ const login = async (req, res) => {
 
         const user = await User.findOne(query);
         if (!user) {
-            return res.status(401).json({ error: 'Invalid credentials: User not found' });
+            return res.status(401).json({ error: 'Invalid phone number or password' });
         }
 
         if (user.isActive === false) {
@@ -58,7 +58,7 @@ const login = async (req, res) => {
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            return res.status(401).json({ error: 'Invalid credentials: Incorrect password' });
+            return res.status(401).json({ error: 'Invalid phone number or password' });
         }
 
         // Update login timestamp

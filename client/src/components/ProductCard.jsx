@@ -102,7 +102,7 @@ const ProductCard = ({ product }) => {
           <span className="text-[10px] text-emerald-700 font-semibold">Instant Stock</span>
         </div>
 
-        {/* Blinkit ADD / Stepper Button */}
+        {/* Quantity Stepper Button */}
         <div>
           {quantity === 0 ? (
             <button

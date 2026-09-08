@@ -2,7 +2,7 @@ import { Sparkles, Wheat, Cookie, Coffee, Heart, Sparkle, Utensils, Box, Zap } f
 import { useCart } from '../context/CartContext';
 
 const CATEGORIES = [
-  { id: 'all', name: 'All Kirana', icon: Sparkles, color: 'bg-amber-100 text-amber-800' },
+  { id: 'all', name: 'All Groceries', icon: Sparkles, color: 'bg-amber-100 text-amber-800' },
   { id: 'staples-and-grains', name: 'Staples & Grains', icon: Wheat, color: 'bg-yellow-100 text-yellow-800' },
   { id: 'packaged-foods-snacks', name: 'Packaged Foods & Snacks', icon: Cookie, color: 'bg-orange-100 text-orange-800' },
   { id: 'beverages-drinks', name: 'Beverages & Chai', icon: Coffee, color: 'bg-emerald-100 text-emerald-800' },

@@ -40,17 +40,15 @@ async function audit() {
   const ordersCount = await Order.countDocuments();
   console.log(`=== ORDERS IN DB: ${ordersCount} ===`);
 
-  // Inspect Admins
-  const Admin = require('../models/Admin');
-  const admins = await Admin.find().select('fullName phone email role');
+  // Inspect Users and Admins
+  const User = require('../models/User');
+  const admins = await User.find({ role: 'admin' }).select('fullName phone email role');
   console.log('\n=== ADMINS IN DB ===');
   admins.forEach(a => console.log(`  [${a.fullName}] ${a.phone} (${a.email}) - role: ${a.role}`));
 
-  // Inspect Users
-  const User = require('../models/User');
-  const users = await User.find().select('fullName phone email role');
-  console.log('\n=== USERS IN DB ===');
-  users.forEach(u => console.log(`  [${u.fullName}] ${u.phone} (${u.email}) - role: ${u.role}`));
+  const customers = await User.find({ role: { $ne: 'admin' } }).select('fullName phone email role');
+  console.log('\n=== CUSTOMERS IN DB ===');
+  customers.forEach(u => console.log(`  [${u.fullName}] ${u.phone} (${u.email}) - role: ${u.role}`));
 
   await mongoose.disconnect();
 }

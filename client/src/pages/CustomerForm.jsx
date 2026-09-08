@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Zap, ShieldCheck, Clock, TrendingUp, ShoppingBag } from 'lucide-react';
-import BlinkitHeader from '../components/BlinkitHeader';
+import QuickHeader from '../components/QuickHeader';
 import CategoryRail from '../components/CategoryRail';
 import ProductCard from '../components/ProductCard';
 import CartDrawer from '../components/CartDrawer';
@@ -143,8 +143,8 @@ const CustomerForm = () => {
 
   return (
     <div className="min-h-screen bg-[#F4F6FB] flex flex-col">
-      {/* Blinkit Top Bar */}
-      <BlinkitHeader />
+      {/* Quick Store Top Bar */}
+      <QuickHeader />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
@@ -274,12 +274,12 @@ const CustomerForm = () => {
       <footer className="bg-white border-t border-gray-100 py-8 mt-12 text-xs text-gray-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-baseline">
-            <span className="text-xl font-black text-black">blink</span>
-            <span className="text-xl font-black text-[#0C831F]">it</span>
-            <span className="w-2 h-2 rounded-full bg-[#F7D02C] ml-0.5"></span>
-            <span className="text-[11px] text-gray-400 font-semibold ml-2">India's Last Minute App</span>
+            <span className="text-xl font-black text-slate-900">Fresh</span>
+            <span className="text-xl font-black text-[#00B074]">Cart</span>
+            <span className="w-2 h-2 rounded-full bg-[#00B074] ml-0.5"></span>
+            <span className="text-[11px] text-gray-400 font-semibold ml-2">Fresh Groceries & Essentials</span>
           </div>
-          <p>© 2026 Blinkit Clone. Engineered for High-Speed Quick Commerce.</p>
+          <p>© 2026 FreshCart. Engineered for High-Speed Quick Commerce.</p>
         </div>
       </footer>
     </div>

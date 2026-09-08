@@ -15,14 +15,14 @@ import {
 import { useCart } from '../context/CartContext';
 
 const SEARCH_PLACEHOLDERS = [
-  'Search "vintage washed t-shirt"',
-  'Search "oversized linen shirt"',
-  'Search "blue cotton polo"',
-  'Search "accessories & tech"',
-  'Search "summer collection"'
+  'Search "Aashirvaad Whole Wheat Atta"',
+  'Search "Fortune Mustard Oil"',
+  'Search "Tata Tea Premium"',
+  'Search "Basmati Rice"',
+  'Search "Maggi Instant Noodles"'
 ];
 
-const BlinkitHeader = () => {
+const FreshCartQuickHeader = () => {
   const navigate = useNavigate();
   const { 
     itemCount, 
@@ -77,9 +77,9 @@ const BlinkitHeader = () => {
             <div className="flex items-center gap-4 lg:gap-8 shrink-0">
               <Link to="/" className="flex items-center group">
                 <div className="flex items-baseline tracking-tighter">
-                  <span className="text-3xl font-black text-black">blink</span>
-                  <span className="text-3xl font-black text-[#0C831F]">it</span>
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#F7D02C] ml-0.5 transform translate-y-1"></span>
+                  <span className="text-3xl font-black text-slate-900">Fresh</span>
+                  <span className="text-3xl font-black text-[#00B074]">Cart</span>
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#00B074] ml-0.5 transform translate-y-1"></span>
                 </div>
               </Link>
 
@@ -188,7 +188,7 @@ const BlinkitHeader = () => {
                 </button>
               )}
 
-              {/* Iconic Blinkit Emerald Green Cart Pill */}
+              {/* Emerald Green Cart Pill */}
               <button
                 onClick={() => setIsCartOpen(true)}
                 className={`relative flex items-center gap-2.5 px-4 py-2.5 rounded-xl font-bold text-sm transition shadow-sm active:scale-95 ${
@@ -275,4 +275,4 @@ const BlinkitHeader = () => {
   );
 };
 
-export default BlinkitHeader;
+export default FreshCartQuickHeader;

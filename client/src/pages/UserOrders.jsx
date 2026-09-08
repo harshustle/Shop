@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Package, Bike, Clock, ChevronRight, ArrowLeft, RefreshCw, AlertCircle } from 'lucide-react';
-import BlinkitHeader from '../components/BlinkitHeader';
+import QuickHeader from '../components/QuickHeader';
 import CartDrawer from '../components/CartDrawer';
 import CheckoutModal from '../components/CheckoutModal';
 import { API_URL } from '../config';
@@ -66,7 +66,7 @@ const UserOrders = () => {
 
   return (
     <div className="min-h-screen bg-[#F4F6FB] flex flex-col">
-      <BlinkitHeader />
+      <QuickHeader />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-8">
         
@@ -157,7 +157,7 @@ const UserOrders = () => {
                     </div>
                   </div>
 
-                  {/* Live Delivery Timeline Progress (Blinkit Style) */}
+                  {/* Live Delivery Timeline Progress */}
                   <div className="bg-gray-50 rounded-2xl p-4 sm:p-6 border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-2">

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Phone, Lock, User, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
+import { Phone, Lock, User, ArrowRight, Loader2, ShoppingBag } from 'lucide-react';
 import { API_URL } from '../config';
 
 const Register = () => {
@@ -31,7 +31,7 @@ const Register = () => {
 
       if (response.ok) {
         localStorage.setItem('userPhone', formData.phone);
-        navigate('/login');
+        navigate('/login', { state: { message: 'Account created successfully! Please sign in.' } });
       } else {
         setError(data.error || 'Registration failed');
       }
@@ -47,23 +47,26 @@ const Register = () => {
       
       {/* Brand Logo */}
       <div className="mb-6 text-center">
-        <Link to="/" className="inline-flex items-baseline tracking-tighter">
-          <span className="text-4xl font-black text-black">blink</span>
-          <span className="text-4xl font-black text-[#0C831F]">it</span>
-          <span className="w-3 h-3 rounded-full bg-[#F7D02C] ml-0.5"></span>
+        <Link to="/" className="inline-flex items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-[#00B074] flex items-center justify-center shadow-lg shadow-[#00B074]/20 text-white">
+            <ShoppingBag size={24} strokeWidth={2.4} />
+          </div>
+          <span className="text-3xl font-black text-slate-900 tracking-tight">FreshCart</span>
         </Link>
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mt-1">India's Last Minute App</p>
+        <p className="text-xs font-semibold text-slate-500 mt-1.5 tracking-wide">
+          Fresh Groceries & Daily Essentials
+        </p>
       </div>
 
       {/* Register Card */}
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-gray-100 shadow-xl relative">
+      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 relative">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-black text-gray-900">Create Account</h2>
-          <span className="px-2.5 py-0.5 bg-emerald-50 text-[#0C831F] text-[10px] font-black rounded-full uppercase">
-            ⚡ 10 Min Delivery
+          <h2 className="text-xl font-black text-slate-900">Create Account</h2>
+          <span className="px-2.5 py-0.5 bg-emerald-50 text-[#00B074] text-[10px] font-black rounded-full uppercase">
+            Quick Signup
           </span>
         </div>
-        <p className="text-xs text-gray-500 mb-6">Sign up to enjoy instant 10-minute doorstep delivery and exclusive deals.</p>
+        <p className="text-xs text-slate-500 mb-6">Sign up to enjoy fresh groceries delivered straight to your doorstep.</p>
 
         {error && (
           <div className="mb-4 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-600 font-bold">
@@ -73,46 +76,46 @@ const Register = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Full Name</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Full Name</label>
             <div className="relative">
-              <User size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+              <User size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type="text"
                 required
                 placeholder="e.g. Rahul Sharma"
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]/30 focus:border-[#0C831F]"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Mobile Number</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Number</label>
             <div className="relative">
-              <Phone size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+              <Phone size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type="tel"
                 required
                 placeholder="10-digit mobile number"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]/30 focus:border-[#0C831F]"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-700 mb-1">Choose Password</label>
+            <label className="block text-xs font-bold text-slate-700 mb-1">Choose Password</label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3.5 top-3.5 text-gray-400" />
+              <Lock size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type="password"
                 required
                 placeholder="Create a strong password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#0C831F]/30 focus:border-[#0C831F]"
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
               />
             </div>
           </div>
@@ -120,7 +123,7 @@ const Register = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 bg-[#0C831F] text-white rounded-2xl font-black text-sm hover:bg-[#0A6E1A] transition shadow-md flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-2"
+            className="w-full py-3.5 bg-[#00B074] text-white rounded-2xl font-black text-sm hover:bg-[#009663] transition shadow-lg shadow-[#00B074]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-2"
           >
             {isLoading ? (
               <>
@@ -136,11 +139,11 @@ const Register = () => {
           </button>
         </form>
 
-        <div className="mt-6 pt-4 border-t border-gray-100 text-center">
-          <p className="text-xs text-gray-500">
+        <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+          <p className="text-xs text-slate-500">
             Already have an account?{' '}
-            <Link to="/login" className="font-bold text-[#0C831F] hover:underline">
-              Log in here
+            <Link to="/login" className="font-bold text-[#00B074] hover:underline">
+              Sign in here
             </Link>
           </p>
         </div>

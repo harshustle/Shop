@@ -320,13 +320,15 @@ MongoDB (shop)
 
 ```text
 Shop/
-├── .gitignore                    # Root gitignore (excludes data/, node_modules/, .env)
-├── README.md                     # Platform architecture & documentation
+├── .gitignore                    # Root gitignore (excludes node_modules/, .env, build artifacts)
+├── README.md                     # Platform architecture & exhaustive documentation
+├── package.json                  # Root monorepo build & deployment automation
 │
 ├── backend/                      # Node.js & Express REST API Server
 │   ├── config/
-│   │   └── db.js                 # MongoDB connection with retry & pooling
-│   ├── controllers/
+│   │   ├── db.js                 # MongoDB connection with retry & connection pooling (pool: 10-50)
+│   │   └── redis.js              # Redis caching client with in-memory fallback
+│   ├── controllers/              # 12 Domain Controllers
 │   │   ├── accountController.js  # Profile, addresses, wishlist management
 │   │   ├── adminController.js    # Super Admin metrics, customers, and overrides
 │   │   ├── authController.js     # JWT auth, login, registration, OTP reset
@@ -335,25 +337,31 @@ Shop/
 │   │   ├── catalogController.js  # Product & variant catalog endpoints
 │   │   ├── checkoutController.js # 15-min stock holds, idempotency & orders
 │   │   ├── couponController.js   # Coupon validation & admin management
+│   │   ├── inventoryController.js# Low stock threshold alerts
 │   │   ├── orderController.js    # Order lifecycle & inventory decrements
-│   │   └── reviewController.js   # Customer reviews & moderation
+│   │   ├── reviewController.js   # Customer reviews & moderation
+│   │   └── uploadController.js   # AWS S3 file upload with local storage fallback
 │   ├── middleware/
 │   │   └── auth.js               # JWT bearer token validator & RBAC guard
-│   ├── models/                   # Mongoose ODM schemas (100% MongoDB)
+│   ├── migrations/               # Database migrations framework
+│   │   ├── 001_create_core_indexes.js
+│   │   ├── 002_seed_indian_wholesale_taxonomy.js
+│   │   └── 003_seed_superadmin_user.js
+│   ├── models/                   # 13 Mongoose ODM schemas (100% MongoDB)
 │   │   ├── Address.js
-│   │   ├── Admin.js
 │   │   ├── Banner.js
 │   │   ├── Cart.js
 │   │   ├── Category.js
 │   │   ├── Coupon.js
+│   │   ├── Migration.js
 │   │   ├── Order.js
 │   │   ├── Payment.js
 │   │   ├── Product.js
 │   │   ├── Review.js
 │   │   ├── StockHold.js
-│   │   ├── User.js
+│   │   ├── User.js               # Unified customer and admin schema
 │   │   └── Wishlist.js
-│   ├── routes/
+│   ├── routes/                   # 12 API Route Handlers
 │   │   ├── accountRoutes.js
 │   │   ├── adminRoutes.js
 │   │   ├── authRoutes.js
@@ -362,57 +370,76 @@ Shop/
 │   │   ├── catalogRoutes.js
 │   │   ├── checkoutRoutes.js
 │   │   ├── couponRoutes.js
+│   │   ├── inventoryRoutes.js
 │   │   ├── orderRoutes.js
-│   │   └── reviewRoutes.js
-│   ├── scripts/                  # Data migration, seeding & verification
+│   │   ├── reviewRoutes.js
+│   │   └── uploadRoutes.js
+│   ├── scripts/                  # Data migration, seeding & verification CLI
 │   │   ├── auditDatabase.js      # Live MongoDB collection document auditor
+│   │   ├── migrate.js            # Migration runner CLI
 │   │   ├── placeRealOrder.js     # Real order test generator
 │   │   ├── restockAll.js         # Variant inventory bulk restocker
 │   │   ├── seedCouponsAndBanners.js # Initial seed for vouchers & banners
-│   │   └── testMetrics.js        # Super Admin API analytics tester
-│   ├── services/
-│   │   ├── inventoryService.js   # Stock holds, alerts & concurrency checks
-│   │   ├── paymentStrategy.js    # Payment provider interface
+│   │   ├── seedTaxonomy.js       # Kirana & wholesale catalog seeder
+│   │   ├── testMetrics.js        # Super Admin API analytics tester
+│   │   ├── testOtpReset.js       # OTP reset test suite
+│   │   └── testPhase1.js         # End-to-end database, auth & RBAC test suite
+│   ├── services/                 # Core Business Logic & Cloud Services
+│   │   ├── csvIngestionService.js# Asynchronous chunked CSV bulk catalog parser
+│   │   ├── inventoryService.js   # 15-min stock holds, alerts & concurrency checks
+│   │   ├── paymentStrategy.js    # Payment provider interface & idempotency ledger
 │   │   ├── redisService.js       # Redis cache & session provider
 │   │   ├── s3Service.js          # AWS S3 file upload & storage client
 │   │   ├── searchService.js      # Faceted catalog text search engine
 │   │   └── tokenService.js       # JWT creation & token validation
+│   ├── uploads/                  # Local fallback media storage
 │   ├── .env                      # Backend environment configurations
+│   ├── Dockerfile                # Production container specification
 │   ├── index.js                  # Main server entry point
 │   └── package.json
 │
-├── client/                       # Storefront & Admin Frontend (React + Vite)
+├── client/                       # Storefront & Admin Frontend (React + Vite + Tailwind)
+│   ├── public/
+│   │   ├── manifest.json
+│   │   └── vite.svg
 │   ├── src/
-│   │   ├── components/
+│   │   ├── assets/               # Static vector icons
+│   │   ├── components/           # 8 Active Reusable UI Components
 │   │   │   ├── CartDrawer.jsx    # Slide-over cart with live coupon discounts
+│   │   │   ├── CategoryRail.jsx  # Horizontal category selector
 │   │   │   ├── CheckoutModal.jsx # Multi-step checkout with address & payment
 │   │   │   ├── FreshCartFooter.jsx # Service pillars, sitemaps & payment badges
 │   │   │   ├── FreshCartNavbar.jsx # Header with autocomplete search & badges
-│   │   │   └── ProtectedRoute.jsx  # Token & Super Admin route protection
+│   │   │   ├── ProductCard.jsx   # Variant selector & quantity stepper
+│   │   │   ├── ProtectedRoute.jsx# Token & Super Admin route protection
+│   │   │   └── QuickHeader.jsx   # Lightweight quick commerce navigation bar
 │   │   ├── context/
 │   │   │   └── CartContext.jsx   # Global cart state, totals, and coupon math
-│   │   ├── pages/
+│   │   ├── pages/                # 9 Active Views
 │   │   │   ├── AdminPanel.jsx    # Super Admin Dashboard (Charts, Orders, Inventory, Coupons, Reviews, Banners)
 │   │   │   ├── CustomerAccount.jsx # Customer profile, addresses, orders & wishlist
-│   │   │   ├── CustomerForm.jsx  # Legacy catalog view
+│   │   │   ├── CustomerForm.jsx  # Quick grocery catalog view
 │   │   │   ├── Home.jsx          # FreshCart Storefront homepage
-│   │   │   ├── Login.jsx         # Authentication portal (Customer & Super Admin)
+│   │   │   ├── Login.jsx         # OWASP-hardened authentication portal
 │   │   │   ├── ProductDetail.jsx # Rich PDP (Gallery, variants, reviews)
 │   │   │   ├── Register.jsx      # Customer registration page
 │   │   │   ├── Shop.jsx          # Catalog browsing with faceted filters
-│   │   │   └── UserOrders.jsx    # User order tracking view
+│   │   │   └── UserOrders.jsx    # Live delivery timeline & order tracking
 │   │   ├── App.jsx               # Client router configuration
 │   │   ├── config.js             # API base URL configuration
 │   │   ├── index.css             # TailwindCSS & theme design tokens
 │   │   └── main.jsx
 │   ├── .env                      # Vite client environment variables
+│   ├── index.html                # HTML5 root with FreshCart SEO & meta tags
 │   ├── package.json
+│   ├── tailwind.config.js
 │   └── vite.config.js
 │
 └── deploy/                       # AWS Production Deployment Configurations
+    ├── AWS_DEPLOYMENT_GUIDE.md   # Step-by-step AWS EC2, S3, ALB, Nginx runbook
+    ├── docker-compose.prod.yml   # Multi-container production stack
     ├── ecosystem.config.js       # PM2 cluster configuration
-    ├── nginx.conf                # Nginx reverse proxy & ALB config
-    └── docker-compose.prod.yml   # Multi-container production stack
+    └── nginx.conf                # Nginx reverse proxy & SSL config
 ```
 
 ---
@@ -426,9 +453,11 @@ Shop/
 | `/product/:slug` | `<ProductDetail />` | Public | Product page with multi-image gallery, variant pills, stock tracker, Buy Now, and reviews. |
 | `/account` | `<CustomerAccount />` | Customer | Account management: Profile edit, saved address book, order history, and wishlist. |
 | `/orders` | `<CustomerAccount />` | Customer | Live tracking and status timeline for customer orders. |
-| `/login` | `<Login />` | Public | Dual-tab login (Customer & Super Admin) with 1-click test credentials and OTP reset. |
+| `/track-order` | `<UserOrders />` | Public / Customer | Live quick grocery order status timeline and real-time delivery step tracker. |
+| `/login` | `<Login />` | Public | OWASP-compliant unified login for Customers & Super Admin with OTP password reset. |
 | `/register` | `<Register />` | Public | Customer account sign-up. |
-| `/admin` | `<AdminPanel />` | Super Admin | Dashboard with revenue spline charts, category donut ring, inventory, orders, coupons, reviews, banners, and analytics. |
+| `/admin` | `<AdminPanel />` | Super Admin | Super Admin dashboard with revenue charts, inventory, orders, coupons, reviews, banners, and analytics. |
+| `/legacy` | `<CustomerForm />` | Public | Quick grocery catalog storefront. |
 
 ---
 

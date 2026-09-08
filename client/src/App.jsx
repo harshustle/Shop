@@ -47,7 +47,11 @@ function App() {
               }
             />
 
-            {/* Legacy Blinkit Storefront Catalog */}
+            {/* Live Order Tracking */}
+            <Route path="/track-order" element={<UserOrders />} />
+            <Route path="/track" element={<UserOrders />} />
+
+            {/* Quick Grocery / Legacy Storefront */}
             <Route path="/legacy" element={<CustomerForm />} />
 
             {/* Authentication */}

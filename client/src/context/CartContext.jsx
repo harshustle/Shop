@@ -6,7 +6,7 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [items, setItems] = useState(() => {
     try {
-      const saved = localStorage.getItem('freshcart_cart') || localStorage.getItem('blinkit_cart');
+      const saved = localStorage.getItem('freshcart_cart');
       return saved ? JSON.parse(saved) : [];
     } catch (e) {
       return [];

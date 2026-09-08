@@ -132,7 +132,7 @@ const FreshCartNavbar = ({ onOpenCart }) => {
             </div>
           </Link>
 
-          {/* Delivery Location Indicator (Blinkit / Kirana Style) */}
+          {/* Delivery Location Indicator */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700">
             <MapPin size={15} className="text-[#00B074] shrink-0" />
             <div className="text-left">
