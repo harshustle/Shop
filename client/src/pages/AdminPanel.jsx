@@ -70,9 +70,9 @@ const AdminPanel = () => {
 
   // Backend Data States
   const [metrics, setMetrics] = useState({
-    adminName: localStorage.getItem('fullName') || 'Admin User',
-    adminEmail: localStorage.getItem('adminEmail') || 'admin@company.com',
-    adminPhone: '9161955178',
+    adminName: localStorage.getItem('fullName') || 'Harsh Srivastava',
+    adminEmail: localStorage.getItem('adminEmail') || 'admin@freshcart.com',
+    adminPhone: localStorage.getItem('adminPhone') || localStorage.getItem('userPhone') || '9161955178',
     adminRole: 'Super Admin',
     totalRevenue: 24582,
     revenueGrowth: '18.2% this week',
@@ -152,14 +152,22 @@ const AdminPanel = () => {
     backgroundColor: '#00B074'
   });
 
+  // Dynamic Avatar Initials Generator
+  const getInitials = (name) => {
+    if (!name || name === 'Super Admin') return 'SA';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   // Profile / Settings form
-  const [profileForm, setProfileForm] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
+  const [profileForm, setProfileForm] = useState(() => ({
+    fullName: localStorage.getItem('fullName') || 'Harsh Srivastava',
+    email: localStorage.getItem('adminEmail') || 'admin@freshcart.com',
+    phone: localStorage.getItem('adminPhone') || localStorage.getItem('userPhone') || '9161955178',
     currentPassword: '',
     newPassword: ''
-  });
+  }));
   const [settingsNotice, setSettingsNotice] = useState({ type: '', text: '' });
 
   // Add product form
@@ -195,11 +203,20 @@ const AdminPanel = () => {
           ...prev,
           ...metricsData
         }));
+        if (metricsData.adminName) localStorage.setItem('fullName', metricsData.adminName);
+        if (metricsData.adminEmail) {
+          localStorage.setItem('adminEmail', metricsData.adminEmail);
+          localStorage.setItem('userEmail', metricsData.adminEmail);
+        }
+        if (metricsData.adminPhone) {
+          localStorage.setItem('adminPhone', metricsData.adminPhone);
+          localStorage.setItem('userPhone', metricsData.adminPhone);
+        }
         setProfileForm(p => ({
           ...p,
-          fullName: metricsData.adminName || 'Admin User',
-          email: metricsData.adminEmail || 'admin@company.com',
-          phone: metricsData.adminPhone || '9161955178'
+          fullName: metricsData.adminName || localStorage.getItem('fullName') || 'Harsh Srivastava',
+          email: metricsData.adminEmail || localStorage.getItem('adminEmail') || 'admin@freshcart.com',
+          phone: metricsData.adminPhone || localStorage.getItem('userPhone') || '9161955178'
         }));
       }
 
@@ -275,6 +292,26 @@ const AdminPanel = () => {
 
   useEffect(() => {
     fetchData();
+
+    const handleUserSync = () => {
+      const storedName = localStorage.getItem('fullName');
+      const storedEmail = localStorage.getItem('adminEmail') || localStorage.getItem('userEmail');
+      const storedPhone = localStorage.getItem('adminPhone') || localStorage.getItem('userPhone');
+      if (storedName || storedEmail) {
+        setMetrics(m => ({
+          ...m,
+          adminName: storedName || m.adminName,
+          adminEmail: storedEmail || m.adminEmail,
+          adminPhone: storedPhone || m.adminPhone
+        }));
+      }
+    };
+    window.addEventListener('storage', handleUserSync);
+    window.addEventListener('freshcart-user-updated', handleUserSync);
+    return () => {
+      window.removeEventListener('storage', handleUserSync);
+      window.removeEventListener('freshcart-user-updated', handleUserSync);
+    };
   }, []);
 
   // Secure Logout
@@ -283,7 +320,11 @@ const AdminPanel = () => {
     localStorage.removeItem('role');
     localStorage.removeItem('fullName');
     localStorage.removeItem('userPhone');
+    localStorage.removeItem('userEmail');
     localStorage.removeItem('adminEmail');
+    localStorage.removeItem('adminPhone');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('freshcart-user-updated'));
     navigate('/login', { replace: true });
   };
 
@@ -489,10 +530,49 @@ const AdminPanel = () => {
       }
 
       if (res.ok) {
+        let updatedName = profileForm.fullName;
+        let updatedEmail = profileForm.email;
+        let updatedPhone = profileForm.phone;
+        try {
+          const data = await res.json();
+          if (data.user) {
+            updatedName = data.user.fullName || updatedName;
+            updatedEmail = data.user.email || updatedEmail;
+            updatedPhone = data.user.phone || updatedPhone;
+          }
+        } catch (e) {}
+
         setSettingsNotice({ type: 'success', text: 'Super Admin profile updated successfully!' });
-        localStorage.setItem('fullName', profileForm.fullName);
-        localStorage.setItem('adminEmail', profileForm.email);
-        setMetrics(m => ({ ...m, adminName: profileForm.fullName, adminEmail: profileForm.email }));
+        localStorage.setItem('fullName', updatedName);
+        localStorage.setItem('adminEmail', updatedEmail);
+        localStorage.setItem('userEmail', updatedEmail);
+        localStorage.setItem('adminPhone', updatedPhone);
+        localStorage.setItem('userPhone', updatedPhone);
+
+        setMetrics(m => ({
+          ...m,
+          adminName: updatedName,
+          adminEmail: updatedEmail,
+          adminPhone: updatedPhone
+        }));
+
+        setProfileForm(p => ({
+          ...p,
+          fullName: updatedName,
+          email: updatedEmail,
+          phone: updatedPhone,
+          currentPassword: '',
+          newPassword: ''
+        }));
+
+        // Broadcast to all application listeners & tabs
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
+          detail: { fullName: updatedName, email: updatedEmail, phone: updatedPhone }
+        }));
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setSettingsNotice({ type: 'error', text: errData.error || 'Failed to update profile' });
       }
     } catch (err) {
       setSettingsNotice({ type: 'error', text: 'Server communication failed' });
@@ -888,22 +968,30 @@ const AdminPanel = () => {
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
                 className="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-50 transition border border-transparent hover:border-slate-200"
               >
-                <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  AU
+                <div className="w-9 h-9 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shadow-xs tracking-tight">
+                  {getInitials(metrics.adminName || localStorage.getItem('fullName') || 'Super Admin')}
                 </div>
                 <div className="text-left">
-                  <p className="text-xs font-bold text-slate-900 leading-tight">Admin User</p>
-                  <p className="text-[11px] text-slate-500 leading-tight">admin@company.com</p>
+                  <p className="text-xs font-bold text-slate-900 leading-tight">
+                    {metrics.adminName || localStorage.getItem('fullName') || 'Super Admin'}
+                  </p>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    {metrics.adminEmail || localStorage.getItem('adminEmail') || 'admin@freshcart.com'}
+                  </p>
                 </div>
                 <ChevronDown size={14} className="text-slate-400 ml-1" />
               </button>
 
               {/* Profile Dropdown Menu */}
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
                   <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                    <p className="text-xs font-black text-slate-900">{metrics.adminName}</p>
-                    <p className="text-[10px] text-slate-400">{metrics.adminPhone}</p>
+                    <p className="text-xs font-black text-slate-900 truncate">
+                      {metrics.adminName || localStorage.getItem('fullName') || 'Super Admin'}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      {metrics.adminEmail || localStorage.getItem('adminEmail') || metrics.adminPhone || 'admin@freshcart.com'}
+                    </p>
                   </div>
                   <button
                     onClick={() => { setActiveTab('settings'); setShowProfileMenu(false); }}

@@ -40,7 +40,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
   const [formData, setFormData] = useState({
     name: localStorage.getItem('fullName') || '',
     phone: localStorage.getItem('userPhone') || '',
-    email: '',
+    email: localStorage.getItem('userEmail') || localStorage.getItem('adminEmail') || '',
     address: selectedLocation?.address || 'Flat 402, Royal Residency, Gomti Nagar, Lucknow',
     addressTag: selectedLocation?.tag || 'Home',
     deliveryMethod: 'instant', // 'instant' | 'scheduled'

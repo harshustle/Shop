@@ -9,13 +9,20 @@ const Category = require('../models/Category');
  */
 const getAdminMetrics = async (req, res) => {
     try {
-        const [orders, customersCount, productsCount, categoriesCount, alerts, adminUser, rawProducts] = await Promise.all([
+        let adminUser = req.user;
+        if (!adminUser && req.userId) {
+            adminUser = await User.findById(req.userId).select('fullName phone email').lean();
+        }
+        if (!adminUser) {
+            adminUser = await User.findOne({ role: 'admin' }).select('fullName phone email').lean();
+        }
+
+        const [orders, customersCount, productsCount, categoriesCount, alerts, rawProducts] = await Promise.all([
             Order.find().sort({ createdAt: -1 }).lean(),
             User.countDocuments({ role: 'customer' }),
             Product.countDocuments(),
             Category.countDocuments(),
             InventoryService.getLowStockAlerts(),
-            User.findOne({ role: 'admin' }).select('fullName phone email').lean(),
             Product.find().limit(20).lean()
         ]);
 
@@ -103,9 +110,9 @@ const getAdminMetrics = async (req, res) => {
         ];
 
         res.json({
-            adminName: adminUser ? adminUser.fullName : 'Admin User',
+            adminName: adminUser ? adminUser.fullName : 'Harsh Srivastava',
             adminPhone: adminUser ? adminUser.phone : '9161955178',
-            adminEmail: (adminUser && adminUser.email) ? adminUser.email : 'admin@company.com',
+            adminEmail: (adminUser && adminUser.email) ? adminUser.email : 'admin@freshcart.com',
             adminRole: 'Super Admin',
             // Top 4 stats
             totalRevenue: totalRevenue > 0 ? totalRevenue : 24582,
@@ -192,7 +199,16 @@ const deleteCustomer = async (req, res) => {
 const updateAdminProfile = async (req, res) => {
     try {
         const { fullName, email, phone } = req.body;
-        const adminUser = await User.findById(req.userId);
+        let adminUser = req.user;
+        if (!adminUser && req.userId) {
+            adminUser = await User.findById(req.userId);
+        }
+        if (!adminUser) {
+            adminUser = await User.findOne({ role: 'admin' });
+        }
+        if (!adminUser && phone) {
+            adminUser = await User.findOne({ phone: phone.trim() });
+        }
         if (!adminUser) {
             return res.status(404).json({ error: 'Admin account not found' });
         }

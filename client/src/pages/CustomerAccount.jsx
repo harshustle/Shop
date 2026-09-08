@@ -70,11 +70,14 @@ const CustomerAccount = () => {
       if (accRes.ok) {
         const data = await accRes.json();
         setAccountData(data);
-        setProfileForm({
-          fullName: data.user?.fullName || '',
-          email: data.user?.email || '',
-          phone: data.user?.phone || ''
-        });
+        const name = data.user?.fullName || localStorage.getItem('fullName') || '';
+        const email = data.user?.email || localStorage.getItem('userEmail') || '';
+        const phone = data.user?.phone || localStorage.getItem('userPhone') || '';
+        setProfileForm({ fullName: name, email: email, phone: phone });
+        if (name) localStorage.setItem('fullName', name);
+        if (email) localStorage.setItem('userEmail', email);
+        if (phone) localStorage.setItem('userPhone', phone);
+        window.dispatchEvent(new Event('storage'));
 
         // Fetch Wishlist products if any
         if (data.wishlist && data.wishlist.length > 0) {
@@ -121,7 +124,14 @@ const CustomerAccount = () => {
       const data = await res.json();
       if (res.ok) {
         setNotice({ type: 'success', text: 'Profile details updated successfully!' });
-        localStorage.setItem('fullName', profileForm.fullName);
+        const updatedName = data.user?.fullName || profileForm.fullName;
+        const updatedEmail = data.user?.email || profileForm.email;
+        localStorage.setItem('fullName', updatedName);
+        if (updatedEmail) localStorage.setItem('userEmail', updatedEmail);
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
+          detail: { fullName: updatedName, email: updatedEmail, phone: profileForm.phone }
+        }));
       } else {
         setNotice({ type: 'error', text: data.error || 'Update failed' });
       }
@@ -173,11 +183,24 @@ const CustomerAccount = () => {
     }
   };
 
+  // Dynamic Avatar Initials Helper
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     localStorage.removeItem('fullName');
     localStorage.removeItem('userPhone');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('adminEmail');
+    localStorage.removeItem('adminPhone');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('freshcart-user-updated'));
     navigate('/login');
   };
 
@@ -191,8 +214,8 @@ const CustomerAccount = () => {
         {/* Top Account Header Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#00B074] text-white flex items-center justify-center font-black text-xl shadow-md shadow-[#00B074]/20">
-              {profileForm.fullName ? profileForm.fullName[0].toUpperCase() : 'U'}
+            <div className="w-14 h-14 rounded-2xl bg-[#00B074] text-white flex items-center justify-center font-black text-xl shadow-md shadow-[#00B074]/20 tracking-tight">
+              {getInitials(profileForm.fullName || 'Customer')}
             </div>
             <div>
               <h1 className="text-xl font-black text-slate-900">{profileForm.fullName || 'FreshCart Customer'}</h1>

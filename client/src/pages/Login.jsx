@@ -56,10 +56,19 @@ const Login = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userPhone', formData.phone);
         localStorage.setItem('role', data.role);
-        localStorage.setItem('fullName', data.user?.fullName || (data.role === 'admin' ? 'Admin User' : 'Customer'));
+        const displayName = data.user?.fullName || (data.role === 'admin' ? 'Harsh Srivastava' : 'Customer');
+        localStorage.setItem('fullName', displayName);
         if (data.user?.email) {
           localStorage.setItem('adminEmail', data.user.email);
+          localStorage.setItem('userEmail', data.user.email);
         }
+        if (data.role === 'admin') {
+          localStorage.setItem('adminPhone', formData.phone);
+        }
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
+          detail: { fullName: displayName, email: data.user?.email, phone: formData.phone }
+        }));
 
         // Seamless routing: SuperAdmin goes to /admin, customers go to storefront
         if (data.role === 'admin') {
@@ -130,7 +139,19 @@ const Login = () => {
         localStorage.setItem('token', data.token);
         localStorage.setItem('userPhone', otpPhone);
         localStorage.setItem('role', data.role);
-        localStorage.setItem('fullName', data.user?.fullName || (data.role === 'admin' ? 'Admin User' : 'Customer'));
+        const displayName = data.user?.fullName || (data.role === 'admin' ? 'Harsh Srivastava' : 'Customer');
+        localStorage.setItem('fullName', displayName);
+        if (data.user?.email) {
+          localStorage.setItem('adminEmail', data.user.email);
+          localStorage.setItem('userEmail', data.user.email);
+        }
+        if (data.role === 'admin') {
+          localStorage.setItem('adminPhone', otpPhone);
+        }
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
+          detail: { fullName: displayName, email: data.user?.email, phone: otpPhone }
+        }));
 
         setTimeout(() => {
           if (data.role === 'admin') {

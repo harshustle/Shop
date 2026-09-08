@@ -34,9 +34,45 @@ const FreshCartNavbar = ({ onOpenCart }) => {
 
   const searchRef = useRef(null);
 
-  const token = localStorage.getItem('token');
-  const role = localStorage.getItem('role');
-  const fullName = localStorage.getItem('fullName') || 'My Account';
+  // Dynamic Avatar Initials Helper
+  const getInitials = (name) => {
+    if (!name || name === 'My Account') return 'FC';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Reactive User Profile State
+  const [userProfile, setUserProfile] = useState(() => ({
+    token: localStorage.getItem('token') || '',
+    role: localStorage.getItem('role') || '',
+    fullName: localStorage.getItem('fullName') || 'My Account',
+    phone: localStorage.getItem('userPhone') || '',
+    email: localStorage.getItem('userEmail') || localStorage.getItem('adminEmail') || ''
+  }));
+
+  useEffect(() => {
+    const syncUser = () => {
+      setUserProfile({
+        token: localStorage.getItem('token') || '',
+        role: localStorage.getItem('role') || '',
+        fullName: localStorage.getItem('fullName') || 'My Account',
+        phone: localStorage.getItem('userPhone') || '',
+        email: localStorage.getItem('userEmail') || localStorage.getItem('adminEmail') || ''
+      });
+    };
+
+    window.addEventListener('storage', syncUser);
+    window.addEventListener('freshcart-user-updated', syncUser);
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('freshcart-user-updated', syncUser);
+    };
+  }, []);
+
+  const token = userProfile.token;
+  const role = userProfile.role;
+  const fullName = userProfile.fullName;
   const isAdmin = role === 'admin';
 
   // Live search debounce
@@ -90,7 +126,12 @@ const FreshCartNavbar = ({ onOpenCart }) => {
     localStorage.removeItem('role');
     localStorage.removeItem('fullName');
     localStorage.removeItem('userPhone');
+    localStorage.removeItem('userEmail');
     localStorage.removeItem('adminEmail');
+    localStorage.removeItem('adminPhone');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('freshcart-user-updated'));
+    setShowUserDropdown(false);
     navigate('/login');
   };
 
@@ -236,7 +277,7 @@ const FreshCartNavbar = ({ onOpenCart }) => {
                   className="flex items-center gap-2 p-2 rounded-2xl hover:bg-slate-50 transition border border-transparent hover:border-slate-200"
                 >
                   <div className="w-9 h-9 rounded-2xl bg-[#E8F8F0] text-[#00B074] flex items-center justify-center font-black text-xs">
-                    {fullName.slice(0, 2).toUpperCase()}
+                    {getInitials(fullName)}
                   </div>
                   <span className="text-xs font-bold text-slate-900 hidden sm:inline">{fullName.split(' ')[0]}</span>
                   <ChevronDown size={14} className="text-slate-400 hidden sm:inline" />
@@ -253,10 +294,12 @@ const FreshCartNavbar = ({ onOpenCart }) => {
 
               {/* User Dropdown Menu */}
               {showUserDropdown && token && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50">
                   <div className="px-3 py-2 border-b border-slate-100 mb-1">
-                    <p className="text-xs font-black text-slate-900">{fullName}</p>
-                    <p className="text-[10px] text-slate-400">{role === 'admin' ? 'Super Admin' : 'Customer'}</p>
+                    <p className="text-xs font-black text-slate-900 truncate">{fullName}</p>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      {userProfile.email || userProfile.phone || (role === 'admin' ? 'Super Admin' : 'Customer')}
+                    </p>
                   </div>
                   <Link
                     to="/account"

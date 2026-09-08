@@ -37,17 +37,48 @@ const FreshCartQuickHeader = () => {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [user, setUser] = useState(null);
+
+  // Dynamic Avatar Initials Helper
+  const getInitials = (name, phone) => {
+    if (name && name.trim()) {
+      const parts = name.trim().split(/\s+/);
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    if (phone) return phone.slice(-2);
+    return 'FC';
+  };
+
+  const [user, setUser] = useState(() => {
+    const token = localStorage.getItem('token');
+    const role = localStorage.getItem('role');
+    const phone = localStorage.getItem('userPhone');
+    const fullName = localStorage.getItem('fullName');
+    const email = localStorage.getItem('userEmail') || localStorage.getItem('adminEmail');
+    if (token) return { phone, role, fullName, email };
+    return null;
+  });
 
   useEffect(() => {
-    try {
+    const syncUser = () => {
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
       const phone = localStorage.getItem('userPhone');
-      if (token && phone) {
-        setUser({ phone, role });
+      const fullName = localStorage.getItem('fullName');
+      const email = localStorage.getItem('userEmail') || localStorage.getItem('adminEmail');
+      if (token) {
+        setUser({ phone, role, fullName, email });
+      } else {
+        setUser(null);
       }
-    } catch (e) {}
+    };
+
+    window.addEventListener('storage', syncUser);
+    window.addEventListener('freshcart-user-updated', syncUser);
+    return () => {
+      window.removeEventListener('storage', syncUser);
+      window.removeEventListener('freshcart-user-updated', syncUser);
+    };
   }, []);
 
   // Rotating placeholder animation
@@ -61,7 +92,13 @@ const FreshCartQuickHeader = () => {
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('userPhone');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('fullName');
     localStorage.removeItem('role');
+    localStorage.removeItem('adminEmail');
+    localStorage.removeItem('adminPhone');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('freshcart-user-updated'));
     setUser(null);
     setIsUserMenuOpen(false);
     navigate('/login');
@@ -131,23 +168,28 @@ const FreshCartQuickHeader = () => {
                 <div className="relative">
                   <button
                     onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                    className="flex items-center gap-1.5 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition"
+                    className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-xl transition"
                   >
-                    <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs">
-                      {user.phone.slice(-2)}
+                    <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs tracking-tight">
+                      {getInitials(user.fullName, user.phone)}
                     </div>
-                    <span className="hidden md:inline">{user.phone}</span>
-                    <ChevronDown size={14} />
+                    <span className="hidden md:inline font-bold text-xs text-slate-800">
+                      {user.fullName ? user.fullName.split(' ')[0] : user.phone}
+                    </span>
+                    <ChevronDown size={14} className="text-gray-400" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {isUserMenuOpen && (
                     <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-in fade-in zoom-in-95">
                       <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-xs text-gray-400 font-medium">Logged in as</p>
-                        <p className="text-sm font-bold text-gray-800 truncate">{user.phone}</p>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Logged in as</p>
+                        <p className="text-xs font-bold text-gray-900 truncate">{user.fullName || user.phone}</p>
+                        {user.email && (
+                          <p className="text-[11px] text-gray-500 truncate">{user.email}</p>
+                        )}
                         <span className="inline-block mt-1 px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-full uppercase">
-                          {user.role}
+                          {user.role === 'admin' ? 'Super Admin' : 'Customer'}
                         </span>
                       </div>
 
