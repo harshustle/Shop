@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, Plus, Minus, ArrowRight, ShieldCheck, Sparkles, Tag, Check, Trash2 } from 'lucide-react';
+import { X, Clock, Plus, Minus, ArrowRight, ShieldCheck, Sparkles, Tag, Check, Trash2, AlertTriangle, MapPin } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
@@ -17,7 +17,8 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
     removeFromCart,
     applyCouponCode,
     removeCoupon,
-    selectedLocation
+    selectedLocation,
+    openLocationModal
   } = useCart();
 
   const [couponInput, setCouponInput] = useState('');
@@ -77,21 +78,51 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
           {/* Drawer Body */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             
-            {/* 15-Min Delivery Header Badge */}
-            <div className="bg-white rounded-2xl p-3.5 border border-emerald-100 shadow-xs flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#E8F8F0] text-[#00B074] flex items-center justify-center shrink-0">
-                <Clock size={20} className="animate-pulse" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 text-xs font-black text-[#00B074]">
-                  <span className="w-2 h-2 rounded-full bg-[#00B074] animate-ping" />
-                  <span>Guaranteed 15-Min Dispatch</span>
+            {/* Geofence Delivery Header Badge */}
+            {selectedLocation?.isDeliverable !== false ? (
+              <div 
+                onClick={() => openLocationModal && openLocationModal()}
+                className="bg-white rounded-2xl p-3.5 border border-emerald-100 shadow-xs flex items-center gap-3 cursor-pointer hover:border-emerald-300 transition group"
+                title="Click to change location or view 5km geofence"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-[#E8F8F0] text-[#00B074] flex items-center justify-center shrink-0">
+                  <Clock size={20} className="animate-pulse" />
                 </div>
-                <p className="text-[11px] text-slate-500 truncate mt-0.5">
-                  Delivering to: <strong className="text-slate-900">{selectedLocation?.address || 'Gomti Nagar, Lucknow'}</strong>
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-[#00B074]">
+                    <span className="w-2 h-2 rounded-full bg-[#00B074] animate-ping" />
+                    <span>⚡ 10-15 Min Delivery ({selectedLocation?.distanceKm || 0.5} km)</span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                    To: <strong className="text-slate-900">{selectedLocation?.address || 'Gomti Nagar, Lucknow'}</strong>
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-[#00B074] uppercase bg-emerald-50 px-2 py-1 rounded-lg group-hover:bg-[#00B074] group-hover:text-white transition">
+                  Change
+                </span>
               </div>
-            </div>
+            ) : (
+              <div 
+                onClick={() => openLocationModal && openLocationModal()}
+                className="bg-rose-50 rounded-2xl p-3.5 border border-rose-200 shadow-xs flex items-center gap-3 cursor-pointer hover:border-rose-300 transition group"
+                title="Click to pick a deliverable location on map"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <AlertTriangle size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-black text-rose-600">
+                    <span>⚠️ Outside 5km Delivery Zone ({selectedLocation?.distanceKm} km)</span>
+                  </div>
+                  <p className="text-[11px] text-rose-800 truncate mt-0.5">
+                    {selectedLocation?.address || 'Selected pin is beyond dark store zone'}
+                  </p>
+                </div>
+                <span className="text-[10px] font-bold text-rose-700 uppercase bg-white border border-rose-200 px-2 py-1 rounded-lg group-hover:bg-rose-600 group-hover:text-white transition">
+                  Change
+                </span>
+              </div>
+            )}
 
             {/* Empty Cart State */}
             {items.length === 0 ? (
@@ -263,19 +294,35 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
           {/* Drawer Footer CTA */}
           {items.length > 0 && (
             <div className="bg-white p-4 border-t border-slate-100 shadow-lg">
-              <button
-                onClick={onCheckout}
-                className="w-full py-3.5 px-5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl font-black text-sm flex items-center justify-between transition shadow-md shadow-[#00B074]/30 active:scale-98"
-              >
-                <div className="flex flex-col text-left">
-                  <span className="text-base font-black">₹{grandTotal.toFixed(2)}</span>
-                  <span className="text-[10px] text-emerald-100 uppercase font-bold">TOTAL • 15-MIN DISPATCH</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm font-black">
-                  <span>Proceed to Checkout</span>
-                  <ArrowRight size={18} />
-                </div>
-              </button>
+              {selectedLocation?.isDeliverable !== false ? (
+                <button
+                  onClick={onCheckout}
+                  className="w-full py-3.5 px-5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl font-black text-sm flex items-center justify-between transition shadow-md shadow-[#00B074]/30 active:scale-98 cursor-pointer"
+                >
+                  <div className="flex flex-col text-left">
+                    <span className="text-base font-black">₹{grandTotal.toFixed(2)}</span>
+                    <span className="text-[10px] text-emerald-100 uppercase font-bold">TOTAL • 15-MIN DISPATCH</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm font-black">
+                    <span>Proceed to Checkout</span>
+                    <ArrowRight size={18} />
+                  </div>
+                </button>
+              ) : (
+                <button
+                  onClick={() => openLocationModal && openLocationModal()}
+                  className="w-full py-3.5 px-5 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-sm flex items-center justify-between transition shadow-md shadow-rose-600/30 cursor-pointer"
+                >
+                  <div className="flex flex-col text-left">
+                    <span className="text-sm font-black">Address Out of Reach</span>
+                    <span className="text-[10px] text-rose-100 uppercase font-bold">CHANGE TO 5KM DELIVERABLE ZONE</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-black bg-white/20 px-3 py-1.5 rounded-xl">
+                    <span>Pick on Map</span>
+                    <ArrowRight size={14} />
+                  </div>
+                </button>
+              )}
             </div>
           )}
 

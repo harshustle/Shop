@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Phone, Lock, ArrowRight, Loader2, KeyRound, CheckCircle2, X, ShoppingBag, AlertCircle } from 'lucide-react';
 import { API_URL } from '../config';
+import GoogleAuthButton from '../components/GoogleAuthButton';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -210,6 +211,16 @@ const Login = () => {
             {error}
           </div>
         )}
+
+        <div className="mb-4">
+          <GoogleAuthButton onError={(err) => setError(err)} label="Continue with Google" />
+        </div>
+
+        <div className="flex items-center gap-3 my-5">
+          <div className="h-px bg-slate-100 flex-1" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">or sign in with phone</span>
+          <div className="h-px bg-slate-100 flex-1" />
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

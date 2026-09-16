@@ -1,5 +1,10 @@
 const User = require('../models/User');
 const TokenService = require('../services/tokenService');
+const RedisService = require('../services/redisService');
+const axios = require('axios');
+
+const PROFILE_TTL = 7 * 24 * 60 * 60; // 7 days
+const OTP_TTL = 10 * 60; // 10 minutes
 
 /**
  * Phase 1 Core Authentication: Login
@@ -64,6 +69,9 @@ const login = async (req, res) => {
         // Update login timestamp
         user.lastLoginAt = new Date();
         await user.save();
+
+        // Cache user profile in Redis
+        await RedisService.set(`user:profile:${user._id}`, user.toSafeJSON(), PROFILE_TTL);
 
         const token = TokenService.generateAccessToken(user);
 
@@ -132,6 +140,9 @@ const register = async (req, res) => {
             lastLoginAt: new Date()
         });
 
+        // Cache new user profile in Redis
+        await RedisService.set(`user:profile:${newUser._id}`, newUser.toSafeJSON(), PROFILE_TTL);
+
         const token = TokenService.generateAccessToken(newUser);
 
         res.status(201).json({
@@ -151,23 +162,30 @@ const register = async (req, res) => {
 
 /**
  * Phase 1 Core Authentication: Get Current Profile
- * Validates token and returns authenticated user details
+ * Validates token and returns authenticated user details (Redis-accelerated)
  */
 const getMe = async (req, res) => {
     try {
-        const user = await User.findById(req.userId);
-        if (!user) {
-            return res.status(404).json({ error: 'User account not found' });
+        const profileKey = `user:profile:${req.userId}`;
+        let cached = await RedisService.get(profileKey);
+
+        if (!cached) {
+            const user = await User.findById(req.userId);
+            if (!user) {
+                return res.status(404).json({ error: 'User account not found' });
+            }
+            cached = user.toSafeJSON();
+            await RedisService.set(profileKey, cached, PROFILE_TTL);
         }
 
         res.json({
-            user: user.toSafeJSON(),
-            userId: user._id,
-            phone: user.phone,
-            email: user.email,
-            fullName: user.fullName,
-            role: user.role,
-            isAdmin: user.role === 'admin'
+            user: cached,
+            userId: cached._id,
+            phone: cached.phone,
+            email: cached.email,
+            fullName: cached.fullName,
+            role: cached.role,
+            isAdmin: cached.role === 'admin'
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -200,6 +218,9 @@ const changePassword = async (req, res) => {
         user.password = newPassword; // Will trigger pre-save bcrypt hash
         await user.save();
 
+        // Invalidate Redis profile cache
+        await RedisService.del(`user:profile:${user._id}`);
+
         res.json({ message: 'Password updated successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -208,7 +229,7 @@ const changePassword = async (req, res) => {
 
 /**
  * Phase 1 OTP: Send Password Reset OTP
- * Supports both SuperAdmin and Normal Customers
+ * Stores ephemeral OTP in Redis with 10-minute auto-expiring TTL
  */
 const sendPasswordResetOtp = async (req, res) => {
     try {
@@ -234,19 +255,24 @@ const sendPasswordResetOtp = async (req, res) => {
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
+        // 1. Store in Redis with 10-minute TTL
+        const otpKey = `otp:reset:${user.phone || user.email}`;
+        await RedisService.set(otpKey, otp, OTP_TTL);
+
+        // 2. Backup to MongoDB user document
         user.resetOtp = otp;
         user.resetOtpExpires = expiresAt;
         await user.save();
 
         console.log(`\n======================================================`);
-        console.log(`[OTP SERVICE] Password Reset Request for: ${user.fullName} (${user.phone}) [Role: ${user.role}]`);
-        console.log(`[OTP CODE]: ${otp}`);
-        console.log(`[EXPIRES]: 10 minutes`);
+        console.log(`[REDIS OTP SERVICE] Password Reset Request for: ${user.fullName} (${user.phone}) [Role: ${user.role}]`);
+        console.log(`[OTP CODE]: ${otp} (Cached in Redis key: ${otpKey})`);
+        console.log(`[EXPIRES]: 10 minutes (TTL: ${OTP_TTL}s)`);
         console.log(`======================================================\n`);
 
         res.json({
             success: true,
-            message: `A 6-digit verification code has been generated for ${user.phone}`,
+            message: `A 6-digit verification code has been generated for ${user.phone || user.email}`,
             phone: user.phone,
             otp, // Returned for instant testing and local dev verification
             expiresInMinutes: 10
@@ -259,7 +285,7 @@ const sendPasswordResetOtp = async (req, res) => {
 
 /**
  * Phase 1 OTP: Verify OTP & Reset Password
- * Resets password using valid 6-digit OTP
+ * Resets password using valid 6-digit OTP validated against Redis
  */
 const verifyOtpAndResetPassword = async (req, res) => {
     try {
@@ -274,11 +300,14 @@ const verifyOtpAndResetPassword = async (req, res) => {
         }
 
         let query = null;
+        let identifier = null;
         if (phone) {
             const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
             query = { phone: cleanPhone };
+            identifier = cleanPhone;
         } else if (email) {
             query = { email: email.trim().toLowerCase() };
+            identifier = email.trim().toLowerCase();
         } else {
             return res.status(400).json({ error: 'Phone or email is required' });
         }
@@ -288,12 +317,16 @@ const verifyOtpAndResetPassword = async (req, res) => {
             return res.status(404).json({ error: 'User account not found' });
         }
 
-        if (!user.resetOtp || user.resetOtp.trim() !== otp.toString().trim()) {
-            return res.status(400).json({ error: 'Invalid verification code (OTP). Please check and retry.' });
-        }
+        // Verify against Redis first
+        const otpKey = `otp:reset:${user.phone || user.email || identifier}`;
+        const redisOtp = await RedisService.get(otpKey);
 
-        if (user.resetOtpExpires && new Date() > user.resetOtpExpires) {
-            return res.status(400).json({ error: 'Verification code has expired. Please request a new OTP.' });
+        const isRedisMatch = redisOtp && redisOtp.toString().trim() === otp.toString().trim();
+        const isDbMatch = user.resetOtp && user.resetOtp.trim() === otp.toString().trim() && 
+                          (!user.resetOtpExpires || new Date() <= user.resetOtpExpires);
+
+        if (!isRedisMatch && !isDbMatch) {
+            return res.status(400).json({ error: 'Invalid or expired verification code (OTP). Please check and retry.' });
         }
 
         // Set new password (triggers pre-save bcrypt hook)
@@ -302,6 +335,10 @@ const verifyOtpAndResetPassword = async (req, res) => {
         user.resetOtpExpires = null;
         user.lastLoginAt = new Date();
         await user.save();
+
+        // Flush consumed OTP and invalidate profile cache in Redis
+        await RedisService.del(otpKey);
+        await RedisService.del(`user:profile:${user._id}`);
 
         // Issue new JWT token
         const token = TokenService.generateAccessToken(user);
@@ -321,11 +358,110 @@ const verifyOtpAndResetPassword = async (req, res) => {
     }
 };
 
+
+/**
+ * Google OAuth Authentication
+ * Verifies Google ID Token and logs in or registers user
+ */
+const googleAuth = async (req, res) => {
+    try {
+        const { credential } = req.body;
+
+        if (!credential) {
+            return res.status(400).json({ error: 'Google credential token is required' });
+        }
+
+        let googleUser = null;
+
+        // Support demo/development token fallback if needed
+        if (credential === 'demo-google-token' && process.env.NODE_ENV !== 'production') {
+            googleUser = {
+                sub: 'demo-google-id-12345',
+                email: 'google.demo@example.com',
+                name: 'Google Demo User',
+                picture: null
+            };
+        } else {
+            // Verify token with Google tokeninfo endpoint
+            try {
+                const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+                googleUser = response.data;
+            } catch (verifyErr) {
+                console.error('Google token validation error:', verifyErr.response?.data || verifyErr.message);
+                return res.status(401).json({ 
+                    error: 'Invalid or expired Google authentication token',
+                    details: verifyErr.response?.data?.error_description || verifyErr.message 
+                });
+            }
+        }
+
+        const { sub: googleId, email, name, picture } = googleUser;
+
+        if (!email) {
+            return res.status(400).json({ error: 'Google account did not provide an email address' });
+        }
+
+        const normalizedEmail = email.trim().toLowerCase();
+
+        // 1. Check if user already exists by googleId
+        let user = await User.findOne({ googleId });
+
+        // 2. If not found by googleId, check by email
+        if (!user) {
+            user = await User.findOne({ email: normalizedEmail });
+            if (user) {
+                // Link googleId and avatar to existing account
+                user.googleId = googleId;
+                if (picture && !user.avatar) {
+                    user.avatar = picture;
+                }
+            }
+        }
+
+        // 3. If still not found, create new user record
+        if (!user) {
+            user = new User({
+                fullName: (name || normalizedEmail.split('@')[0] || 'Google User').trim(),
+                email: normalizedEmail,
+                googleId,
+                avatar: picture || null,
+                role: 'customer',
+                isActive: true
+            });
+        }
+
+        if (user.isActive === false) {
+            return res.status(403).json({ error: 'Account suspended: Please contact store administrator' });
+        }
+
+        // Update login timestamp
+        user.lastLoginAt = new Date();
+        await user.save();
+
+        // Cache user profile in Redis
+        await RedisService.set(`user:profile:${user._id}`, user.toSafeJSON(), PROFILE_TTL);
+
+        const token = TokenService.generateAccessToken(user);
+
+        return res.json({
+            message: 'Google authentication successful',
+            token,
+            role: user.role,
+            user: user.toSafeJSON()
+        });
+    } catch (error) {
+        console.error('Google auth internal failure:', error);
+        res.status(500).json({ error: 'Google authentication failed', details: error.message });
+    }
+};
+
 module.exports = { 
     login, 
     register, 
     getMe, 
     changePassword,
     sendPasswordResetOtp,
-    verifyOtpAndResetPassword
+    verifyOtpAndResetPassword,
+    googleAuth
 };
+

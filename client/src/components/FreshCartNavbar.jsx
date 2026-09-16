@@ -19,11 +19,19 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
+import LocationPickerModal from './LocationPickerModal';
 
 const FreshCartNavbar = ({ onOpenCart }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { cartItems, getCartCount, getCartTotal } = useCart();
+  const { 
+    cartItems, 
+    getCartCount, 
+    getCartTotal, 
+    selectedLocation, 
+    isLocationModalOpen, 
+    setIsLocationModalOpen 
+  } = useCart();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -173,14 +181,33 @@ const FreshCartNavbar = ({ onOpenCart }) => {
             </div>
           </Link>
 
-          {/* Delivery Location Indicator */}
-          <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs font-semibold text-slate-700">
-            <MapPin size={15} className="text-[#00B074] shrink-0" />
-            <div className="text-left">
-              <p className="text-[10px] text-slate-400 font-bold uppercase leading-none">Deliver to</p>
-              <p className="font-bold text-slate-900 leading-tight">Gomti Nagar, Lucknow</p>
+          {/* Interactive Delivery Location Indicator with Geofence Status */}
+          <button 
+            type="button"
+            onClick={() => setIsLocationModalOpen(true)}
+            className="hidden lg:flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-slate-50 hover:bg-slate-100/80 border border-slate-200/80 text-xs font-semibold text-slate-700 transition group cursor-pointer"
+            title="Click to change delivery address or verify 5km geofence"
+          >
+            <div className={`p-1 rounded-full ${selectedLocation?.isDeliverable !== false ? 'bg-emerald-100 text-[#00B074]' : 'bg-rose-100 text-rose-600'}`}>
+              <MapPin size={15} className="shrink-0" />
             </div>
-          </div>
+            <div className="text-left max-w-[170px]">
+              <div className="flex items-center gap-1.5">
+                <p className="text-[10px] text-slate-400 font-bold uppercase leading-none">
+                  Deliver to: {selectedLocation?.tag || 'Home'}
+                </p>
+                {selectedLocation?.isDeliverable !== false ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="Deliverable in 10-15 mins"></span>
+                ) : (
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" title="Outside delivery zone"></span>
+                )}
+              </div>
+              <p className="font-bold text-slate-900 leading-tight truncate text-[11px]">
+                {selectedLocation?.address || 'Select Delivery Location'}
+              </p>
+            </div>
+            <ChevronDown size={14} className="text-slate-400 group-hover:text-slate-600 shrink-0 transition" />
+          </button>
 
           {/* Real-Time Search Bar */}
           <div ref={searchRef} className="flex-1 max-w-xl relative hidden md:block">
@@ -431,6 +458,12 @@ const FreshCartNavbar = ({ onOpenCart }) => {
           )}
         </div>
       )}
+
+      {/* Interactive Map & Turf Geofencing Modal */}
+      <LocationPickerModal 
+        isOpen={isLocationModalOpen} 
+        onClose={() => setIsLocationModalOpen(false)} 
+      />
 
     </header>
   );

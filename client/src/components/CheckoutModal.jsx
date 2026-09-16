@@ -42,7 +42,8 @@ const CheckoutModal = ({ isOpen, onClose }) => {
     clearCart,
     isCheckoutOpen,
     setIsCheckoutOpen,
-    selectedLocation
+    selectedLocation,
+    openLocationModal
   } = useCart();
 
   const showModal = isOpen !== undefined ? isOpen : isCheckoutOpen;
@@ -98,12 +99,29 @@ const CheckoutModal = ({ isOpen, onClose }) => {
     }
   }, [showModal]);
 
+  // Keep formData address synchronized with selected location from map
+  useEffect(() => {
+    if (selectedLocation?.address) {
+      setFormData(prev => ({
+        ...prev,
+        address: selectedLocation.address,
+        addressTag: selectedLocation.tag || prev.addressTag,
+        pincode: selectedLocation.postalCode || prev.pincode
+      }));
+    }
+  }, [selectedLocation]);
+
   if (!showModal) return null;
 
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
       setError('Please fill your name, phone number, and delivery address');
+      return;
+    }
+
+    if (selectedLocation?.isDeliverable === false) {
+      setError('Your selected delivery location is outside our 5.0 km delivery geofence. Please change your delivery pin to a serviceable zone.');
       return;
     }
 
@@ -448,6 +466,41 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                     className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
                   />
                 </div>
+              </div>
+
+              {/* Turf Geofence Verification Status Card */}
+              <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between gap-3 ${
+                selectedLocation?.isDeliverable !== false 
+                  ? 'bg-emerald-50/70 border-emerald-200/80 text-emerald-900' 
+                  : 'bg-rose-50 border-rose-200 text-rose-900'
+              }`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedLocation?.isDeliverable !== false ? 'bg-[#00B074] text-white' : 'bg-rose-500 text-white'
+                  }`}>
+                    <MapPin size={15} />
+                  </div>
+                  <div className="truncate">
+                    <p className="font-extrabold text-[11px] leading-tight">
+                      {selectedLocation?.isDeliverable !== false 
+                        ? `⚡ 5km Geofence Verified (${selectedLocation?.distanceKm || 0.5} km from Hub)` 
+                        : `⚠️ Outside 5km Delivery Zone (${selectedLocation?.distanceKm} km away)`}
+                    </p>
+                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
+                      {selectedLocation?.isDeliverable !== false 
+                        ? '10-15 Min Express Dispatch Active' 
+                        : 'Please pick an address within the 5km dark store perimeter'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => openLocationModal && openLocationModal()}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-extrabold text-slate-800 transition shrink-0 shadow-2xs"
+                >
+                  Change on Map
+                </button>
               </div>
 
               {/* Delivery Address & Pincode */}

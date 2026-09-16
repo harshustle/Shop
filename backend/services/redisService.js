@@ -3,7 +3,15 @@
  */
 class RedisService {
     constructor() {
-        this.redisUrl = process.env.REDIS_URL;
+        let rawUrl = process.env.REDIS_URL ? process.env.REDIS_URL.trim() : null;
+        if (rawUrl && rawUrl.includes('-u ')) {
+            const hasTls = rawUrl.includes('--tls');
+            rawUrl = rawUrl.split('-u ').pop().trim();
+            if (hasTls && rawUrl.startsWith('redis://')) {
+                rawUrl = rawUrl.replace('redis://', 'rediss://');
+            }
+        }
+        this.redisUrl = rawUrl;
         this.client = null;
         this.isConnected = false;
 
@@ -18,19 +26,22 @@ class RedisService {
             try {
                 // Check if ioredis or redis is installed
                 const Redis = require('ioredis');
+                const isTls = this.redisUrl.startsWith('rediss://');
                 this.client = new Redis(this.redisUrl, {
-                    maxRetriesPerRequest: 1,
+                    maxRetriesPerRequest: 3,
+                    connectTimeout: 10000,
+                    keepAlive: 30000,
+                    lazyConnect: true,
                     retryStrategy: (times) => {
-                        if (times > 3) return null; // stop retrying after 3 attempts
-                        return Math.min(times * 200, 1000);
+                        if (times > 10) return null;
+                        return Math.min(times * 200, 3000);
                     },
-                    enableReadyCheck: true,
-                    lazyConnect: true
+                    ...(isTls ? { tls: { rejectUnauthorized: false } } : {})
                 });
 
                 await this.client.connect();
                 this.isConnected = true;
-                console.log(`[RedisService] Connected to Redis instance at ${this.redisUrl}`);
+                console.log(`[RedisService] Connected to production Redis cluster`);
 
                 this.client.on('error', (err) => {
                     this.isConnected = false;

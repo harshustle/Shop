@@ -1,6 +1,9 @@
 const Order = require('../models/Order');
 const User = require('../models/User');
+const RedisService = require('../services/redisService');
 const { v4: uuidv4 } = require('uuid');
+
+const ORDER_CACHE_TTL = 5 * 60; // 5 minutes in seconds
 
 /**
  * Creates order - 100% compatible with CustomerForm.jsx and spec
@@ -111,6 +114,11 @@ const createOrder = async (req, res) => {
             ).catch(() => {});
         }
 
+        // Invalidate customer order cache in Redis
+        if (phoneNumber) {
+            await RedisService.del(`user:orders:${phoneNumber}`);
+        }
+
         res.status(201).json(order);
     } catch (error) {
         console.error('Order creation error:', error);
@@ -162,6 +170,10 @@ const updateOrderStatus = async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
+        if (order.phoneNumber) {
+            await RedisService.del(`user:orders:${order.phoneNumber}`);
+        }
+
         res.json(order);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -195,6 +207,10 @@ const fulfillOrder = async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
+        if (order.phoneNumber) {
+            await RedisService.del(`user:orders:${order.phoneNumber}`);
+        }
+
         res.json({
             message: 'Order fulfilled and marked as shipped',
             order
@@ -226,12 +242,25 @@ const trackOrder = async (req, res) => {
 };
 
 /**
- * Get orders by customer phone (for Dashboard & UserOrders)
+ * Get orders by customer phone (Redis-accelerated)
  */
 const getUserOrdersByPhone = async (req, res) => {
     try {
         const { phone } = req.params;
+        const orderKey = `user:orders:${phone}`;
+
+        // 1. Check Redis cache first
+        const cached = await RedisService.get(orderKey);
+        if (cached && Array.isArray(cached)) {
+            return res.json(cached);
+        }
+
+        // 2. Hydrate from MongoDB
         const orders = await Order.find({ phoneNumber: phone }).sort({ createdAt: -1 });
+
+        // 3. Cache in Redis with 5-minute TTL
+        await RedisService.set(orderKey, orders, ORDER_CACHE_TTL);
+
         res.json(orders);
     } catch (error) {
         console.error('Error fetching user orders:', error);
@@ -253,6 +282,11 @@ const deleteOrder = async (req, res) => {
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
         }
+
+        if (order.phoneNumber) {
+            await RedisService.del(`user:orders:${order.phoneNumber}`);
+        }
+
         res.status(200).json({ message: 'Order deleted successfully' });
     } catch (error) {
         res.status(400).json({ error: error.message });

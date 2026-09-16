@@ -4,10 +4,26 @@ const bcrypt = require('bcrypt');
 const userSchema = new mongoose.Schema({
     phone: {
         type: String,
-        required: [true, 'Mobile phone number is required'],
+        required: [function() { return !this.googleId; }, 'Mobile phone number is required'],
         unique: true,
+        sparse: true,
         trim: true,
-        match: [/^[6-9]\d{9}$/, 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)']
+        validate: {
+            validator: function(v) {
+                if (!v && this.googleId) return true;
+                return /^[6-9]\d{9}$/.test(v);
+            },
+            message: 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)'
+        }
+    },
+    googleId: {
+        type: String,
+        sparse: true,
+        unique: true
+    },
+    avatar: {
+        type: String,
+        default: null
     },
     email: {
         type: String,
@@ -24,7 +40,7 @@ const userSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, 'Password is required'],
+        required: [function() { return !this.googleId; }, 'Password is required'],
         minlength: [4, 'Password must be at least 4 characters long']
     },
     role: {
@@ -82,7 +98,7 @@ const userSchema = new mongoose.Schema({
 
 // Pre-save bcrypt hashing
 userSchema.pre('save', async function(next) {
-    if (!this.isModified('password')) return next();
+    if (!this.isModified('password') || !this.password) return next();
     try {
         const saltRounds = 10;
         this.password = await bcrypt.hash(this.password, saltRounds);

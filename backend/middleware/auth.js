@@ -1,9 +1,14 @@
 const TokenService = require('../services/tokenService');
 const User = require('../models/User');
+const RedisService = require('../services/redisService');
+const QCRedis = require('../services/quickCommerceRedis');
+
+const PROFILE_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 
 /**
  * Core Authentication Middleware
- * Extracts and verifies JWT Access Token from Authorization Header
+ * Extracts and verifies JWT Access Token from Authorization Header with Redis Profile Caching
+ * and Instant Token Blacklist Revocation (Pattern 45)
  */
 const requireAuth = async (req, res, next) => {
     try {
@@ -15,6 +20,12 @@ const requireAuth = async (req, res, next) => {
         const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
         if (!token) {
             return res.status(401).json({ error: 'Authentication required: Bearer token is missing' });
+        }
+
+        // Pattern 45: Check Redis JWT Blacklist for rapid revocation
+        const isRevoked = await QCRedis.isTokenBlacklisted(token);
+        if (isRevoked) {
+            return res.status(401).json({ error: 'Session terminated: Token has been revoked. Please sign in again.' });
         }
 
         const { valid, payload, expired, message } = TokenService.verifyAccessToken(token);
@@ -31,11 +42,19 @@ const requireAuth = async (req, res, next) => {
         req.isAdmin = payload.role === 'admin' || payload.isAdmin === true;
         req.userClaims = payload;
 
-        // Optionally fetch active user from DB to verify user is not deleted or suspended
-        const user = await User.findById(payload.userId).select('-password');
+        // Check Redis profile cache first for sub-millisecond lookup
+        const profileKey = `user:profile:${payload.userId}`;
+        let user = await RedisService.get(profileKey);
+
         if (!user) {
-            return res.status(401).json({ error: 'User account not found or was removed' });
+            const dbUser = await User.findById(payload.userId).select('-password');
+            if (!dbUser) {
+                return res.status(401).json({ error: 'User account not found or was removed' });
+            }
+            user = dbUser.toSafeJSON ? dbUser.toSafeJSON() : dbUser.toObject();
+            await RedisService.set(profileKey, user, PROFILE_TTL);
         }
+
         if (user.isActive === false) {
             return res.status(403).json({ error: 'Account suspended: Contact support' });
         }
@@ -77,8 +96,32 @@ const superAdminOnly = (req, res, next) => {
     next();
 };
 
+/**
+ * Distributed Rate Limiting Middleware (Pattern 42)
+ */
+const rateLimiter = (maxLimit = 50, windowSeconds = 60) => {
+    return async (req, res, next) => {
+        try {
+            const identifier = req.userId || req.ip || 'anonymous';
+            const { allowed, current, maxLimit: limit, remaining } = await QCRedis.checkRateLimit(identifier, maxLimit, windowSeconds);
+            res.setHeader('X-RateLimit-Limit', limit);
+            res.setHeader('X-RateLimit-Remaining', remaining);
+            if (!allowed) {
+                return res.status(429).json({
+                    error: 'Too Many Requests: Rate quota exceeded. Please slow down.',
+                    retryAfterSeconds: windowSeconds
+                });
+            }
+            next();
+        } catch (e) {
+            next();
+        }
+    };
+};
+
 // Default export is requireAuth for seamless backward-compatibility with existing routes
 module.exports = requireAuth;
 module.exports.requireAuth = requireAuth;
 module.exports.requireRole = requireRole;
 module.exports.superAdminOnly = superAdminOnly;
+module.exports.rateLimiter = rateLimiter;

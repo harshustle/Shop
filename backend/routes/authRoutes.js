@@ -7,11 +7,13 @@ const {
     getMe, 
     changePassword,
     sendPasswordResetOtp,
-    verifyOtpAndResetPassword
+    verifyOtpAndResetPassword,
+    googleAuth
 } = require('../controllers/authController');
 
 router.post('/login', login);
 router.post('/register', register);
+router.post('/google', googleAuth);
 router.get('/me', auth, getMe);
 router.post('/change-password', auth, changePassword);
 

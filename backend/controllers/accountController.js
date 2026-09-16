@@ -1,27 +1,66 @@
 const Address = require('../models/Address');
 const User = require('../models/User');
 const Wishlist = require('../models/Wishlist');
+const RedisService = require('../services/redisService');
+const QCRedis = require('../services/quickCommerceRedis');
+
+const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+const LOCATION_TTL = 30 * 24 * 60 * 60; // 30 days
 
 /**
- * Get customer profile & saved addresses
+ * Get customer profile & saved addresses (Redis accelerated)
  * GET /api/account/me
  */
 const getAccountDetails = async (req, res) => {
     try {
-        const [user, addresses, wishlistDoc] = await Promise.all([
-            User.findById(req.userId).select('-password'),
-            Address.find({ userId: req.userId }).sort({ isDefault: -1, createdAt: -1 }),
-            Wishlist.findOne({ userId: req.userId })
+        const profileKey = `user:profile:${req.userId}`;
+        const addressesKey = `user:addresses:${req.userId}`;
+        const wishlistKey = `user:wishlist:${req.userId}`;
+
+        // 1. Fetch all 3 from Redis in parallel
+        const [cachedUser, cachedAddresses, cachedWishlist] = await Promise.all([
+            RedisService.get(profileKey),
+            RedisService.get(addressesKey),
+            RedisService.get(wishlistKey)
         ]);
 
-        if (!user) return res.status(404).json({ error: 'User account not found' });
+        let user = cachedUser;
+        let addresses = cachedAddresses;
+        let wishlist = cachedWishlist;
 
-        const activeWishlist = wishlistDoc?.products?.map(p => p.toString()) || user.metadata?.wishlist || [];
+        // 2. Hydrate missing data from MongoDB
+        const dbPromises = [];
+        if (!user) dbPromises.push(User.findById(req.userId).select('-password'));
+        if (!addresses) dbPromises.push(Address.find({ userId: req.userId }).sort({ isDefault: -1, createdAt: -1 }));
+        if (!wishlist) dbPromises.push(Wishlist.findOne({ userId: req.userId }));
+
+        if (dbPromises.length > 0) {
+            const dbResults = await Promise.all(dbPromises);
+            let idx = 0;
+
+            if (!user) {
+                const dbUser = dbResults[idx++];
+                if (!dbUser) return res.status(404).json({ error: 'User account not found' });
+                user = dbUser.toSafeJSON ? dbUser.toSafeJSON() : dbUser;
+                await RedisService.set(profileKey, user, CACHE_TTL);
+            }
+
+            if (!addresses) {
+                addresses = dbResults[idx++] || [];
+                await RedisService.set(addressesKey, addresses, CACHE_TTL);
+            }
+
+            if (!wishlist) {
+                const wishlistDoc = dbResults[idx++];
+                wishlist = wishlistDoc?.products?.map(p => p.toString()) || user?.metadata?.wishlist || [];
+                await RedisService.set(wishlistKey, wishlist, CACHE_TTL);
+            }
+        }
 
         res.json({
-            user: user.toSafeJSON(),
+            user,
             addresses: addresses || [],
-            wishlist: activeWishlist
+            wishlist: wishlist || []
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -42,7 +81,12 @@ const updateProfile = async (req, res) => {
         if (email) user.email = email.trim().toLowerCase();
         await user.save();
 
-        res.json({ message: 'Profile updated successfully', user: user.toSafeJSON() });
+        const safeUser = user.toSafeJSON();
+
+        // Update Redis cache immediately
+        await RedisService.set(`user:profile:${req.userId}`, safeUser, CACHE_TTL);
+
+        res.json({ message: 'Profile updated successfully', user: safeUser });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -54,7 +98,7 @@ const updateProfile = async (req, res) => {
  */
 const saveAddress = async (req, res) => {
     try {
-        const { label, fullName, phoneNumber, streetAddress, apartment, city, state, postalCode, isDefault } = req.body;
+        const { label, fullName, phoneNumber, streetAddress, apartment, city, state, postalCode, latitude, longitude, isDefault } = req.body;
 
         if (!fullName || !phoneNumber || !streetAddress || !city || !postalCode) {
             return res.status(400).json({ error: 'Full name, phone, street address, city, and pincode are required' });
@@ -70,8 +114,14 @@ const saveAddress = async (req, res) => {
             city: city.trim(),
             state: state || 'Uttar Pradesh',
             postalCode: postalCode.trim(),
+            latitude: latitude ? Number(latitude) : null,
+            longitude: longitude ? Number(longitude) : null,
             isDefault: isDefault === true
         });
+
+        // Re-cache updated address list in Redis
+        const updatedAddresses = await Address.find({ userId: req.userId }).sort({ isDefault: -1, createdAt: -1 });
+        await RedisService.set(`user:addresses:${req.userId}`, updatedAddresses, CACHE_TTL);
 
         res.status(201).json({ message: 'Address saved successfully', address });
     } catch (error) {
@@ -87,6 +137,11 @@ const deleteAddress = async (req, res) => {
     try {
         const { id } = req.params;
         await Address.findOneAndDelete({ _id: id, userId: req.userId });
+
+        // Re-cache updated address list in Redis
+        const remainingAddresses = await Address.find({ userId: req.userId }).sort({ isDefault: -1, createdAt: -1 });
+        await RedisService.set(`user:addresses:${req.userId}`, remainingAddresses, CACHE_TTL);
+
         res.json({ message: 'Address removed successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -102,11 +157,13 @@ const toggleWishlist = async (req, res) => {
         const { productId } = req.body;
         if (!productId) return res.status(400).json({ error: 'Product ID is required' });
 
-        const user = await User.findById(req.userId);
-        if (!user) return res.status(404).json({ error: 'User not found' });
+        const wishlistKey = `user:wishlist:${req.userId}`;
+        let wishlist = await RedisService.get(wishlistKey);
 
-        user.metadata = user.metadata || {};
-        let wishlist = user.metadata.wishlist || [];
+        if (!Array.isArray(wishlist)) {
+            const wishlistDoc = await Wishlist.findOne({ userId: req.userId });
+            wishlist = wishlistDoc?.products?.map(p => p.toString()) || [];
+        }
 
         const index = wishlist.indexOf(productId.toString());
         let added = false;
@@ -117,16 +174,22 @@ const toggleWishlist = async (req, res) => {
             added = true;
         }
 
-        user.metadata.wishlist = wishlist;
-        user.markModified('metadata');
-        await user.save();
+        // 1. Update Redis instantly
+        await RedisService.set(wishlistKey, wishlist, CACHE_TTL);
 
-        // Also persist to dedicated Wishlist collection
-        await Wishlist.findOneAndUpdate(
-            { userId: req.userId },
-            { products: wishlist },
-            { upsert: true, new: true }
-        ).catch(err => console.error('Wishlist collection sync error:', err));
+        // 2. Asynchronously persist to MongoDB
+        (async () => {
+            try {
+                await Wishlist.findOneAndUpdate(
+                    { userId: req.userId },
+                    { products: wishlist },
+                    { upsert: true, new: true }
+                );
+                await User.findByIdAndUpdate(req.userId, { 'metadata.wishlist': wishlist });
+            } catch (err) {
+                console.error('[Wishlist] Background sync error:', err.message);
+            }
+        })();
 
         res.json({
             success: true,
@@ -139,10 +202,73 @@ const toggleWishlist = async (req, res) => {
     }
 };
 
+/**
+ * Get active user's selected delivery location from Redis
+ * GET /api/account/location
+ */
+const getUserLocation = async (req, res) => {
+    try {
+        const locationKey = `user:location:${req.userId}`;
+        const location = await RedisService.get(locationKey);
+        res.json({
+            success: true,
+            location: location || null
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * Save user's selected delivery location in Redis
+ * PUT /api/account/location
+ */
+const setUserLocation = async (req, res) => {
+    try {
+        const { tag, address, flatNumber, landmark, lat, lng, postalCode, city } = req.body;
+        if (!address) {
+            return res.status(400).json({ error: 'Address is required' });
+        }
+
+        let geofenceResult = { withinBoundary: true, distanceKm: 0.5, etaMinutes: 12 };
+        if (lat && lng) {
+            geofenceResult = QCRedis.validateAddressGeofence(Number(lat), Number(lng));
+        }
+
+        const locationKey = `user:location:${req.userId}`;
+        const locationData = {
+            tag: tag || 'Home',
+            address: address.trim(),
+            flatNumber: flatNumber ? flatNumber.trim() : '',
+            landmark: landmark ? landmark.trim() : '',
+            lat: lat ? Number(lat) : null,
+            lng: lng ? Number(lng) : null,
+            postalCode: postalCode || '',
+            city: city || '',
+            distanceKm: geofenceResult.distanceKm,
+            isDeliverable: geofenceResult.withinBoundary,
+            etaMinutes: geofenceResult.etaMinutes || (geofenceResult.withinBoundary ? 12 : null),
+            updatedAt: new Date()
+        };
+
+        await RedisService.set(locationKey, locationData, LOCATION_TTL);
+
+        res.json({
+            success: true,
+            message: 'Delivery location saved in Redis',
+            location: locationData
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getAccountDetails,
     updateProfile,
     saveAddress,
     deleteAddress,
-    toggleWishlist
+    toggleWishlist,
+    getUserLocation,
+    setUserLocation
 };

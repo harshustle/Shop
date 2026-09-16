@@ -13,6 +13,7 @@ import {
   X 
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import LocationPickerModal from './LocationPickerModal';
 
 const SEARCH_PLACEHOLDERS = [
   'Search "Aashirvaad Whole Wheat Atta"',
@@ -30,12 +31,13 @@ const FreshCartQuickHeader = () => {
     setIsCartOpen, 
     selectedLocation, 
     setSelectedLocation,
+    isLocationModalOpen,
+    setIsLocationModalOpen,
     searchQuery,
     setSearchQuery 
   } = useCart();
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
-  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   // Dynamic Avatar Initials Helper
@@ -257,62 +259,11 @@ const FreshCartQuickHeader = () => {
       </header>
 
       {/* Location Picker Modal */}
-      {isLocationModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-gray-100">
-            <div className="flex items-center justify-between pb-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <MapPin className="text-[#0C831F]" size={22} />
-                <h3 className="font-bold text-lg text-gray-900">Choose Delivery Address</h3>
-              </div>
-              <button 
-                onClick={() => setIsLocationModalOpen(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {[
-                { tag: 'Home', address: 'Flat 402, Green Glen Layout, Bellandur, Bangalore - 560103' },
-                { tag: 'Office', address: 'Prestige Tech Park, Marathahalli-Sarjapur ORR, Bangalore - 560103' },
-                { tag: 'Other', address: '12th Main Road, Indiranagar, Bangalore - 560038' }
-              ].map((loc, i) => (
-                <div 
-                  key={i}
-                  onClick={() => {
-                    setSelectedLocation(loc);
-                    setIsLocationModalOpen(false);
-                  }}
-                  className={`p-3.5 rounded-2xl border cursor-pointer transition flex items-start gap-3 ${
-                    selectedLocation.tag === loc.tag
-                      ? 'border-[#0C831F] bg-emerald-50/50'
-                      : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className={`mt-0.5 p-1.5 rounded-full ${
-                    selectedLocation.tag === loc.tag ? 'bg-[#0C831F] text-white' : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    <MapPin size={14} />
-                  </div>
-                  <div>
-                    <span className="font-bold text-sm text-gray-900">{loc.tag}</span>
-                    <p className="text-xs text-gray-600 mt-0.5">{loc.address}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={() => setIsLocationModalOpen(false)}
-              className="mt-6 w-full py-3 bg-[#0C831F] text-white rounded-xl font-bold text-sm hover:bg-[#0A6E1A] transition"
-            >
-              Confirm Location
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Turf Geofenced Interactive Leaflet Map Modal */}
+      <LocationPickerModal 
+        isOpen={isLocationModalOpen} 
+        onClose={() => setIsLocationModalOpen(false)} 
+      />
     </>
   );
 };

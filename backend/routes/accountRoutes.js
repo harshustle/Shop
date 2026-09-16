@@ -6,7 +6,9 @@ const {
     updateProfile,
     saveAddress,
     deleteAddress,
-    toggleWishlist
+    toggleWishlist,
+    getUserLocation,
+    setUserLocation
 } = require('../controllers/accountController');
 
 router.use(auth);
@@ -16,5 +18,7 @@ router.put('/profile', updateProfile);
 router.post('/addresses', saveAddress);
 router.delete('/addresses/:id', deleteAddress);
 router.post('/wishlist/toggle', toggleWishlist);
+router.get('/location', getUserLocation);
+router.put('/location', setUserLocation);
 
 module.exports = router;

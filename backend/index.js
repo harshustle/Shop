@@ -21,6 +21,7 @@ const bannerRoutes = require('./routes/bannerRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const logisticsRoutes = require('./routes/logisticsRoutes');
+const quickCommerceRoutes = require('./routes/quickCommerceRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +76,7 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/account', accountRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/logistics', logisticsRoutes);
+app.use('/api/qcommerce', quickCommerceRoutes);
 
 // Aliases for v1 specifications
 app.use('/api/v1/checkout', checkoutRoutes);
