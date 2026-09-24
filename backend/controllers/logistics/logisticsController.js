@@ -1,4 +1,4 @@
-const logisticsService = require('../../services/logisticsService');
+const logisticsService = require('../../services/logistics/logisticsService');
 const Order = require('../../models/order/Order');
 
 /**

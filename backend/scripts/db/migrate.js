@@ -2,11 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const Migration = require('../models/system/Migration');
+const Migration = require('../../models/system/Migration');
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const MIGRATIONS_DIR = path.resolve(__dirname, '../migrations');
+const MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
 
 const connectMigrationDB = async () => {
     let uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shop';
@@ -22,13 +22,23 @@ const connectMigrationDB = async () => {
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 8000 });
 };
 
-const getMigrationFiles = () => {
-    if (!fs.existsSync(MIGRATIONS_DIR)) {
-        fs.mkdirSync(MIGRATIONS_DIR, { recursive: true });
+const scanMigrationFiles = (dir) => {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results = results.concat(scanMigrationFiles(fullPath));
+        } else if (entry.name.endsWith('.js')) {
+            results.push({
+                fullPath,
+                fileName: entry.name,
+                relative: path.relative(MIGRATIONS_DIR, fullPath).replace(/\\/g, '/')
+            });
+        }
     }
-    return fs.readdirSync(MIGRATIONS_DIR)
-        .filter(file => file.endsWith('.js'))
-        .sort();
+    return results.sort((a, b) => a.fileName.localeCompare(b.fileName));
 };
 
 const runUp = async () => {
@@ -37,7 +47,7 @@ const runUp = async () => {
     console.log('Phase 1: Database Migrations Runner (Up)');
     console.log('==================================================');
 
-    const files = getMigrationFiles();
+    const files = scanMigrationFiles(MIGRATIONS_DIR);
     if (files.length === 0) {
         console.log('No migration files found in migrations directory.');
         process.exit(0);
@@ -46,7 +56,7 @@ const runUp = async () => {
     const appliedMigrations = await Migration.find().lean();
     const appliedNames = new Set(appliedMigrations.map(m => m.name));
 
-    const pending = files.filter(f => !appliedNames.has(f));
+    const pending = files.filter(f => !appliedNames.has(f.fileName) && !appliedNames.has(f.relative));
     if (pending.length === 0) {
         console.log('✓ All migrations are already up to date.');
         process.exit(0);
@@ -57,10 +67,9 @@ const runUp = async () => {
         : 1;
 
     for (const file of pending) {
-        const filePath = path.join(MIGRATIONS_DIR, file);
-        const migration = require(filePath);
+        const migration = require(file.fullPath);
 
-        console.log(`\nExecuting: ${file}...`);
+        console.log(`\nExecuting: ${file.fileName} (${file.relative})...`);
         const startTime = Date.now();
 
         try {
@@ -68,15 +77,15 @@ const runUp = async () => {
             const duration = Date.now() - startTime;
 
             await Migration.create({
-                name: file,
+                name: file.fileName,
                 batch: currentBatch,
                 executedAt: new Date(),
                 executionTimeMs: duration
             });
 
-            console.log(`✓ Migrated:  ${file} (${duration}ms)`);
+            console.log(`✓ Migrated:  ${file.fileName} (${duration}ms)`);
         } catch (error) {
-            console.error(`❌ Migration failed at ${file}:`, error.message);
+            console.error(`❌ Migration failed at ${file.fileName}:`, error.message);
             process.exit(1);
         }
     }
@@ -91,17 +100,20 @@ const runStatus = async () => {
     console.log('Phase 1: Database Migration Status');
     console.log('==================================================');
 
-    const files = getMigrationFiles();
+    const files = scanMigrationFiles(MIGRATIONS_DIR);
     const applied = await Migration.find().sort({ executedAt: 1 }).lean();
-    const appliedMap = new Map(applied.map(m => [m.name, m]));
+    const appliedMap = new Map();
+    for (const m of applied) {
+        appliedMap.set(m.name, m);
+    }
 
     console.log(`\nFound ${files.length} total migration files:\n`);
     for (const file of files) {
-        if (appliedMap.has(file)) {
-            const record = appliedMap.get(file);
-            console.log(`  [APPLIED]  ${file.padEnd(45)} (Batch ${record.batch}, ${record.executedAt.toISOString().slice(0, 19)})`);
+        if (appliedMap.has(file.fileName) || appliedMap.has(file.relative)) {
+            const record = appliedMap.get(file.fileName) || appliedMap.get(file.relative);
+            console.log(`  [APPLIED]  ${file.relative.padEnd(45)} (Batch ${record.batch}, ${record.executedAt.toISOString().slice(0, 19)})`);
         } else {
-            console.log(`  [PENDING]  ${file}`);
+            console.log(`  [PENDING]  ${file.relative}`);
         }
     }
     console.log('');

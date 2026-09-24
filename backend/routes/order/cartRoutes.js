@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const TokenService = require('../../services/tokenService');
+const TokenService = require('../../services/auth/tokenService');
 const {
     getCart,
     syncCart,

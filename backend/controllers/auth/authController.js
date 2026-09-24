@@ -1,7 +1,7 @@
 const User = require('../../models/auth/User');
-const TokenService = require('../../services/tokenService');
-const RedisService = require('../../services/redisService');
-const QCRedis = require('../../services/quickCommerceRedis');
+const TokenService = require('../../services/auth/tokenService');
+const RedisService = require('../../services/cache/redisService');
+const QCRedis = require('../../services/cache/quickCommerceRedis');
 const axios = require('axios');
 
 const PROFILE_TTL = 7 * 24 * 60 * 60; // 7 days

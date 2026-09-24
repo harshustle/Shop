@@ -1,9 +1,9 @@
 const Product = require('../../models/catalog/Product');
 const Category = require('../../models/catalog/Category');
-const SearchService = require('../../services/searchService');
-const InventoryService = require('../../services/inventoryService');
-const CsvIngestionService = require('../../services/csvIngestionService');
-const redisService = require('../../services/redisService');
+const SearchService = require('../../services/catalog/searchService');
+const InventoryService = require('../../services/inventory/inventoryService');
+const CsvIngestionService = require('../../services/catalog/csvIngestionService');
+const redisService = require('../../services/cache/redisService');
 
 /**
  * UC-1: Search & Filter Catalog with Facets in MongoDB (Cached in Redis)

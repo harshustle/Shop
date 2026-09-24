@@ -1,8 +1,8 @@
 const Address = require('../../models/account/Address');
 const User = require('../../models/auth/User');
 const Wishlist = require('../../models/account/Wishlist');
-const RedisService = require('../../services/redisService');
-const QCRedis = require('../../services/quickCommerceRedis');
+const RedisService = require('../../services/cache/redisService');
+const QCRedis = require('../../services/cache/quickCommerceRedis');
 
 const CACHE_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 const LOCATION_TTL = 30 * 24 * 60 * 60; // 30 days

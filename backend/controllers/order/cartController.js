@@ -1,6 +1,6 @@
 const Cart = require('../../models/order/Cart');
-const InventoryService = require('../../services/inventoryService');
-const RedisService = require('../../services/redisService');
+const InventoryService = require('../../services/inventory/inventoryService');
+const RedisService = require('../../services/cache/redisService');
 const { v4: uuidv4 } = require('uuid');
 
 const CART_TTL = 30 * 24 * 60 * 60; // 30 days in seconds

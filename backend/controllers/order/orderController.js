@@ -1,6 +1,6 @@
 const Order = require('../../models/order/Order');
 const User = require('../../models/auth/User');
-const RedisService = require('../../services/redisService');
+const RedisService = require('../../services/cache/redisService');
 const { v4: uuidv4 } = require('uuid');
 
 const ORDER_CACHE_TTL = 5 * 60; // 5 minutes in seconds

@@ -1,4 +1,4 @@
-const InventoryService = require('../../services/inventoryService');
+const InventoryService = require('../../services/inventory/inventoryService');
 
 const getLowStockAlerts = async (req, res) => {
     try {

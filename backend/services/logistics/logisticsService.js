@@ -1,5 +1,5 @@
-const Order = require('../models/order/Order');
-const User = require('../models/auth/User');
+const Order = require('../../models/order/Order');
+const User = require('../../models/auth/User');
 
 class LogisticsService {
     constructor() {

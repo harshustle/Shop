@@ -1,4 +1,4 @@
-const s3Service = require('../../services/s3Service');
+const s3Service = require('../../services/media/s3Service');
 const path = require('path');
 
 const uploadMediaAsset = async (req, res) => {

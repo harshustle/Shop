@@ -1,10 +1,10 @@
 const Order = require('../../models/order/Order');
 const Cart = require('../../models/order/Cart');
 const User = require('../../models/auth/User');
-const InventoryService = require('../../services/inventoryService');
-const razorpayService = require('../../services/razorpayService');
-const redisService = require('../../services/redisService');
-const { processIdempotentPayment } = require('../../services/paymentStrategy');
+const InventoryService = require('../../services/inventory/inventoryService');
+const razorpayService = require('../../services/order/razorpayService');
+const redisService = require('../../services/cache/redisService');
+const { processIdempotentPayment } = require('../../services/order/paymentStrategy');
 const { v4: uuidv4 } = require('uuid');
 
 /**

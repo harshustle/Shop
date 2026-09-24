@@ -5,10 +5,14 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "migrate": "node scripts/migrate.js up",
-    "migrate:status": "node scripts/migrate.js status",
-    "test:phase1": "node scripts/testPhase1.js",
-    "test:refresh": "node scripts/testRefreshToken.js"
+    "migrate": "node scripts/db/migrate.js up",
+    "migrate:status": "node scripts/db/migrate.js status",
+    "test:phase1": "node scripts/test/testPhase1.js",
+    "test:refresh": "node scripts/test/testRefreshToken.js",
+    "seed:taxonomy": "node scripts/seed/seedTaxonomy.js",
+    "seed:coupons": "node scripts/seed/seedCouponsAndBanners.js",
+    "seed:restock": "node scripts/seed/restockAll.js",
+    "db:audit": "node scripts/db/auditDatabase.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1128.0",

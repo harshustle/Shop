@@ -1,7 +1,7 @@
 const User = require('../../models/auth/User');
 const Order = require('../../models/order/Order');
 const Product = require('../../models/catalog/Product');
-const InventoryService = require('../../services/inventoryService');
+const InventoryService = require('../../services/inventory/inventoryService');
 const Category = require('../../models/catalog/Category');
 
 /**

@@ -1,10 +1,10 @@
 const mongoose = require('mongoose');
-const Category = require('../models/catalog/Category');
-const Product = require('../models/catalog/Product');
+const Category = require('../../models/catalog/Category');
+const Product = require('../../models/catalog/Product');
 const dotenv = require('dotenv');
 const path = require('path');
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const CATEGORY_TAXONOMY = [
     // Top-Level Parents

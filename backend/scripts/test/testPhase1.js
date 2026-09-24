@@ -7,12 +7,12 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const { connectDB, isDBHealthy } = require('../config/db');
-const User = require('../models/auth/User');
-const Migration = require('../models/system/Migration');
-const TokenService = require('../services/tokenService');
+const { connectDB, isDBHealthy } = require('../../config/db');
+const User = require('../../models/auth/User');
+const Migration = require('../../models/system/Migration');
+const TokenService = require('../../services/auth/tokenService');
 
 const API_BASE = 'http://localhost:3000/api';
 

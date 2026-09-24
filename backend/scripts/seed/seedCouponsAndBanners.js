@@ -1,10 +1,10 @@
 require('dotenv').config({ path: '../.env' });
 const mongoose = require('mongoose');
-const Coupon = require('../models/marketing/Coupon');
-const Banner = require('../models/marketing/Banner');
-const Product = require('../models/catalog/Product');
-const Review = require('../models/review/Review');
-const User = require('../models/auth/User');
+const Coupon = require('../../models/marketing/Coupon');
+const Banner = require('../../models/marketing/Banner');
+const Product = require('../../models/catalog/Product');
+const Review = require('../../models/review/Review');
+const User = require('../../models/auth/User');
 
 const seed = async () => {
     try {

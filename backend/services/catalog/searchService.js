@@ -1,5 +1,5 @@
-const Product = require('../models/catalog/Product');
-const Category = require('../models/catalog/Category');
+const Product = require('../../models/catalog/Product');
+const Category = require('../../models/catalog/Category');
 
 class SearchService {
     /**

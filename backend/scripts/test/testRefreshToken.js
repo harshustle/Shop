@@ -5,10 +5,10 @@ const path = require('path');
 const dotenv = require('dotenv');
 const http = require('http');
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-const { connectDB } = require('../config/db');
-const TokenService = require('../services/tokenService');
+const { connectDB } = require('../../config/db');
+const TokenService = require('../../services/auth/tokenService');
 const app = require('../index');
 
 const runTests = async () => {

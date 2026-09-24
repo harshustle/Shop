@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const QCRedis = require('../../services/quickCommerceRedis');
+const QCRedis = require('../../services/cache/quickCommerceRedis');
 
 // ============================================================================
 // DOMAIN 1: CHECKOUT & FLASH SALES

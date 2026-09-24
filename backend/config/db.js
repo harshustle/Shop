@@ -14,6 +14,26 @@ const mongooseOptions = {
     family: 4 // IPv4
 };
 
+// Recursive migration file scanner supporting domain subfolders
+const scanMigrationFiles = (dir) => {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            results = results.concat(scanMigrationFiles(fullPath));
+        } else if (entry.name.endsWith('.js')) {
+            results.push({
+                fullPath,
+                fileName: entry.name,
+                relative: path.relative(dir, fullPath).replace(/\\/g, '/')
+            });
+        }
+    }
+    return results.sort((a, b) => a.fileName.localeCompare(b.fileName));
+};
+
 // Auto-run pending migrations on connect
 const runPendingMigrations = async () => {
     try {
@@ -21,13 +41,10 @@ const runPendingMigrations = async () => {
         const migrationsDir = path.resolve(__dirname, '../migrations');
         if (!fs.existsSync(migrationsDir)) return;
 
-        const files = fs.readdirSync(migrationsDir)
-            .filter(f => f.endsWith('.js'))
-            .sort();
-
+        const files = scanMigrationFiles(migrationsDir);
         const applied = await Migration.find().lean();
         const appliedNames = new Set(applied.map(m => m.name));
-        const pending = files.filter(f => !appliedNames.has(f));
+        const pending = files.filter(f => !appliedNames.has(f.fileName) && !appliedNames.has(f.relative));
 
         if (pending.length > 0) {
             console.log(`Executing ${pending.length} pending database migrations...`);
@@ -36,16 +53,16 @@ const runPendingMigrations = async () => {
                 : 1;
 
             for (const file of pending) {
-                const migration = require(path.join(migrationsDir, file));
+                const migration = require(file.fullPath);
                 const start = Date.now();
                 await migration.up(mongoose.connection.db);
                 await Migration.create({
-                    name: file,
+                    name: file.fileName,
                     batch: currentBatch,
                     executedAt: new Date(),
                     executionTimeMs: Date.now() - start
                 });
-                console.log(`✓ Migrated: ${file}`);
+                console.log(`✓ Migrated: ${file.fileName}`);
             }
         }
     } catch (err) {

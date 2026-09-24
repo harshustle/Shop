@@ -354,10 +354,13 @@ Shop/
 │   │       └── reviewController.js   # Product ratings, reviews & moderation
 │   ├── middleware/
 │   │   └── auth.js               # JWT bearer token validator & RBAC guard
-│   ├── migrations/               # Database migrations framework
-│   │   ├── 001_create_core_indexes.js
-│   │   ├── 002_seed_indian_wholesale_taxonomy.js
-│   │   └── 003_seed_superadmin_user.js
+│   ├── migrations/               # Domain-Driven Database Migrations
+│   │   ├── auth/
+│   │   │   └── 003_seed_superadmin_user.js           # Super Admin initial bootstrap
+│   │   ├── catalog/
+│   │   │   └── 002_seed_indian_wholesale_taxonomy.js # Categories & taxonomy seeder
+│   │   └── system/
+│   │       └── 001_create_core_indexes.js            # Core indexes & TTL holds
 │   ├── models/                   # Domain-Driven Mongoose ODM Schemas
 │   │   ├── account/
 │   │   │   ├── Address.js        # Multi-tag shipping address book
@@ -404,24 +407,42 @@ Shop/
 │   │   │   └── quickCommerceRoutes.js # 10-minute ultra-fast delivery routes
 │   │   └── review/
 │   │       └── reviewRoutes.js   # Customer ratings, reviews & moderation
-│   ├── scripts/                  # Data migration, seeding & verification CLI
-│   │   ├── auditDatabase.js      # Live MongoDB collection document auditor
-│   │   ├── migrate.js            # Migration runner CLI
-│   │   ├── placeRealOrder.js     # Real order test generator
-│   │   ├── restockAll.js         # Variant inventory bulk restocker
-│   │   ├── seedCouponsAndBanners.js # Initial seed for vouchers & banners
-│   │   ├── seedTaxonomy.js       # Kirana & wholesale catalog seeder
-│   │   ├── testMetrics.js        # Super Admin API analytics tester
-│   │   ├── testOtpReset.js       # OTP reset test suite
-│   │   └── testPhase1.js         # End-to-end database, auth & RBAC test suite
-│   ├── services/                 # Core Business Logic & Cloud Services
-│   │   ├── csvIngestionService.js# Asynchronous chunked CSV bulk catalog parser
-│   │   ├── inventoryService.js   # 15-min stock holds, alerts & concurrency checks
-│   │   ├── paymentStrategy.js    # Payment provider interface & idempotency ledger
-│   │   ├── redisService.js       # Redis cache & session provider
-│   │   ├── s3Service.js          # AWS S3 file upload & storage client
-│   │   ├── searchService.js      # Faceted catalog text search engine
-│   │   └── tokenService.js       # JWT creation & token validation
+│   ├── scripts/                  # Domain-Driven Data migration, seeding, testing & CLI tools
+│   │   ├── db/
+│   │   │   ├── auditDatabase.js      # Live MongoDB collection document auditor
+│   │   │   └── migrate.js            # Migration runner CLI (up / status)
+│   │   ├── seed/
+│   │   │   ├── placeRealOrder.js     # Real order test generator
+│   │   │   ├── restockAll.js         # Variant inventory bulk restocker
+│   │   │   ├── seedCouponsAndBanners.js # Initial seed for vouchers & banners
+│   │   │   └── seedTaxonomy.js       # Kirana & wholesale catalog seeder
+│   │   ├── test/
+│   │   │   ├── testMetrics.js        # Super Admin API analytics tester
+│   │   │   ├── testOtpReset.js       # OTP reset test suite
+│   │   │   ├── testPhase1.js         # End-to-end database, auth & RBAC test suite
+│   │   │   ├── testProductionFlow.js # End-to-end production checkout & order flow tester
+│   │   │   └── testRefreshToken.js   # JWT refresh token rotation tester
+│   │   └── tools/
+│   │       ├── findBlinkitImages.py  # Image crawler & discovery utility
+│   │       └── inspectTiles.py       # Catalog layout & tile inspector
+│   ├── services/                 # Domain-Driven Core Services & Cloud Engines
+│   │   ├── auth/
+│   │   │   └── tokenService.js       # JWT creation, refresh tokens & cryptographic validation
+│   │   ├── cache/
+│   │   │   ├── quickCommerceRedis.js # Distributed rate limiting & geospatial locking
+│   │   │   └── redisService.js       # High-speed in-memory & Redis cache manager
+│   │   ├── catalog/
+│   │   │   ├── csvIngestionService.js# Asynchronous chunked CSV bulk catalog parser
+│   │   │   └── searchService.js      # Faceted catalog text search engine
+│   │   ├── inventory/
+│   │   │   └── inventoryService.js   # 15-min stock holds, safety stock & concurrency checks
+│   │   ├── logistics/
+│   │   │   └── logisticsService.js   # Delivery fleet assignment, tracking & transit radius
+│   │   ├── media/
+│   │   │   └── s3Service.js          # AWS S3 direct presigned URLs & WebP storage client
+│   │   └── order/
+│   │       ├── paymentStrategy.js    # Payment provider interface & idempotency ledger
+│   │       └── razorpayService.js    # Canonical pricing in paise, Razorpay orders & webhooks
 │   ├── uploads/                  # Local fallback media storage
 │   ├── .env                      # Backend environment configurations
 │   ├── Dockerfile                # Production container specification
@@ -2137,8 +2158,8 @@ npm install
 ### 2. Seed Initial Catalog, Coupons & Super Admin
 ```bash
 cd backend
-node scripts/seedCouponsAndBanners.js
-node scripts/restockAll.js
+npm run seed:coupons     # or: node scripts/seed/seedCouponsAndBanners.js
+npm run seed:restock     # or: node scripts/seed/restockAll.js
 ```
 
 ### 3. Start Backend & Client Dev Servers
