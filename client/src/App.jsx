@@ -11,12 +11,15 @@ import Register from './pages/Register';
 import AdminPanel from './pages/AdminPanel';
 import UserOrders from './pages/UserOrders';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    <CartProvider>
-      <Router>
-        <div className="min-h-screen bg-[#F4F6FB] text-slate-800 font-sans antialiased">
+    <ErrorBoundary>
+      <CartProvider>
+        <Router>
+          <div className="min-h-screen bg-[#F4F6FB] text-slate-800 font-sans antialiased">
           <Routes>
             {/* Storefront Customer Routes */}
             <Route path="/" element={<Home />} />
@@ -68,13 +71,14 @@ function App() {
               }
             />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Sliced Tomato 404 Fallback for Undefined Routes */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </div>
       </Router>
     </CartProvider>
-  );
+  </ErrorBoundary>
+);
 }
 
 export default App;

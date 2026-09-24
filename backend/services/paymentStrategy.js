@@ -1,4 +1,4 @@
-const Payment = require('../models/Payment');
+const Payment = require('../models/order/Payment');
 const { v4: uuidv4 } = require('uuid');
 
 class IPaymentStrategy {

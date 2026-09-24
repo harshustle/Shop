@@ -8,20 +8,20 @@ const fs = require('fs');
 const { connectDB } = require('./config/db');
 
 // Route Handlers
-const authRoutes = require('./routes/authRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const catalogRoutes = require('./routes/catalogRoutes');
-const cartRoutes = require('./routes/cartRoutes');
-const checkoutRoutes = require('./routes/checkoutRoutes');
-const inventoryRoutes = require('./routes/inventoryRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const couponRoutes = require('./routes/couponRoutes');
-const reviewRoutes = require('./routes/reviewRoutes');
-const bannerRoutes = require('./routes/bannerRoutes');
-const accountRoutes = require('./routes/accountRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');
-const logisticsRoutes = require('./routes/logisticsRoutes');
-const quickCommerceRoutes = require('./routes/quickCommerceRoutes');
+const authRoutes = require('./routes/auth/authRoutes');
+const orderRoutes = require('./routes/order/orderRoutes');
+const catalogRoutes = require('./routes/catalog/catalogRoutes');
+const cartRoutes = require('./routes/order/cartRoutes');
+const checkoutRoutes = require('./routes/order/checkoutRoutes');
+const inventoryRoutes = require('./routes/inventory/inventoryRoutes');
+const adminRoutes = require('./routes/admin/adminRoutes');
+const couponRoutes = require('./routes/marketing/couponRoutes');
+const reviewRoutes = require('./routes/review/reviewRoutes');
+const bannerRoutes = require('./routes/marketing/bannerRoutes');
+const accountRoutes = require('./routes/account/accountRoutes');
+const uploadRoutes = require('./routes/media/uploadRoutes');
+const logisticsRoutes = require('./routes/logistics/logisticsRoutes');
+const quickCommerceRoutes = require('./routes/order/quickCommerceRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -95,11 +95,14 @@ if (fs.existsSync(clientDistPath)) {
   });
 }
 
-// Global Error Handler
-app.use((err, req, res, next) => {
-  console.error('Unhandled server error:', err.stack || err.message);
-  res.status(500).json({ error: 'Internal server error', details: err.message });
-});
+// Error Handling & 404 Middleware
+const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
+
+// 404 Not Found Catch-All (serves JSON for APIs and Tomato Sliced page for web)
+app.use(notFoundHandler);
+
+// Centralized Error Normalization Handler
+app.use(errorHandler);
 
 // Start server
 const startServer = async () => {
@@ -120,6 +123,9 @@ const startServer = async () => {
   }
 };
 
-startServer();
+if (require.main === module) {
+  startServer();
+}
 
 module.exports = app;
+

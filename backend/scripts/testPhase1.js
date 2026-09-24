@@ -10,8 +10,8 @@ const jwt = require('jsonwebtoken');
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const { connectDB, isDBHealthy } = require('../config/db');
-const User = require('../models/User');
-const Migration = require('../models/Migration');
+const User = require('../models/auth/User');
+const Migration = require('../models/system/Migration');
 const TokenService = require('../services/tokenService');
 
 const API_BASE = 'http://localhost:3000/api';

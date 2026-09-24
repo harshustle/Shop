@@ -1,7 +1,7 @@
 const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
-const Product = require('../models/Product');
-const User = require('../models/User');
+const Product = require('../models/catalog/Product');
+const User = require('../models/auth/User');
 
 class RazorpayService {
     constructor() {

@@ -57,7 +57,15 @@ const TESTIMONIALS = [
 
 const Home = () => {
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, setIsLocationModalOpen } = useCart();
+
+  // Home page open hote hi location maange
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLocationModalOpen(true);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [setIsLocationModalOpen]);
 
   const [banners, setBanners] = useState([]);
   const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
@@ -70,6 +78,7 @@ const Home = () => {
   // Cart & Checkout Drawers
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+
 
   useEffect(() => {
     const fetchHomeData = async () => {

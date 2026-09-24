@@ -1,5 +1,5 @@
-const Product = require('../models/Product');
-const StockHold = require('../models/StockHold');
+const Product = require('../models/catalog/Product');
+const StockHold = require('../models/order/StockHold');
 const redisService = require('./redisService');
 
 class InventoryService {

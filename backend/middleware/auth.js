@@ -1,5 +1,5 @@
 const TokenService = require('../services/tokenService');
-const User = require('../models/User');
+const User = require('../models/auth/User');
 const RedisService = require('../services/redisService');
 const QCRedis = require('../services/quickCommerceRedis');
 

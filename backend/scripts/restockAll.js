@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 async function restock() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shop';
   await mongoose.connect(uri);
-  const Product = require('../models/Product');
+  const Product = require('../models/catalog/Product');
   const res = await Product.updateMany(
     {},
     { 

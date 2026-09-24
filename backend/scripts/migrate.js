@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
-const Migration = require('../models/Migration');
+const Migration = require('../models/system/Migration');
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 

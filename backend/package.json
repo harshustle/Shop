@@ -7,7 +7,8 @@
     "dev": "nodemon index.js",
     "migrate": "node scripts/migrate.js up",
     "migrate:status": "node scripts/migrate.js status",
-    "test:phase1": "node scripts/testPhase1.js"
+    "test:phase1": "node scripts/testPhase1.js",
+    "test:refresh": "node scripts/testRefreshToken.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1128.0",

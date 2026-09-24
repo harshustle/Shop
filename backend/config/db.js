@@ -17,7 +17,7 @@ const mongooseOptions = {
 // Auto-run pending migrations on connect
 const runPendingMigrations = async () => {
     try {
-        const Migration = require('../models/Migration');
+        const Migration = require('../models/system/Migration');
         const migrationsDir = path.resolve(__dirname, '../migrations');
         if (!fs.existsSync(migrationsDir)) return;
 

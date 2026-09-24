@@ -328,52 +328,82 @@ Shop/
 │   ├── config/
 │   │   ├── db.js                 # MongoDB connection with retry & connection pooling (pool: 10-50)
 │   │   └── redis.js              # Redis caching client with in-memory fallback
-│   ├── controllers/              # 12 Domain Controllers
-│   │   ├── accountController.js  # Profile, addresses, wishlist management
-│   │   ├── adminController.js    # Super Admin metrics, customers, and overrides
-│   │   ├── authController.js     # JWT auth, login, registration, OTP reset
-│   │   ├── bannerController.js   # Hero carousel banners management
-│   │   ├── cartController.js     # Server-side cart synchronization
-│   │   ├── catalogController.js  # Product & variant catalog endpoints
-│   │   ├── checkoutController.js # 15-min stock holds, idempotency & orders
-│   │   ├── couponController.js   # Coupon validation & admin management
-│   │   ├── inventoryController.js# Low stock threshold alerts
-│   │   ├── orderController.js    # Order lifecycle & inventory decrements
-│   │   ├── reviewController.js   # Customer reviews & moderation
-│   │   └── uploadController.js   # AWS S3 file upload with local storage fallback
+│   ├── controllers/              # 10 Domain Services & Feature Controllers
+│   │   ├── account/
+│   │   │   └── accountController.js  # Customer Profile, Addresses, Wallet, Wishlist
+│   │   ├── admin/
+│   │   │   └── adminController.js    # Super Admin metrics, users, orders, overrides
+│   │   ├── auth/
+│   │   │   └── authController.js     # JWT auth, Google OAuth, Refresh tokens, OTP reset
+│   │   ├── catalog/
+│   │   │   └── catalogController.js  # Faceted product search, categories, CSV ingestion
+│   │   ├── inventory/
+│   │   │   └── inventoryController.js# Low stock threshold alerts & inventory audits
+│   │   ├── logistics/
+│   │   │   └── logisticsController.js# Delivery fleet, serviceability & live tracking
+│   │   ├── marketing/
+│   │   │   ├── bannerController.js   # Hero carousel promo banners
+│   │   │   └── couponController.js   # Discount vouchers & validation engine
+│   │   ├── media/
+│   │   │   └── uploadController.js   # AWS S3 media uploads & Presigned URLs
+│   │   ├── order/
+│   │   │   ├── cartController.js     # Server-side cart sync & stock reservation
+│   │   │   ├── checkoutController.js # Canonical pricing, Razorpay, COD anti-fraud
+│   │   │   └── orderController.js    # Order lifecycle, cancellations, tracking
+│   │   └── review/
+│   │       └── reviewController.js   # Product ratings, reviews & moderation
 │   ├── middleware/
 │   │   └── auth.js               # JWT bearer token validator & RBAC guard
 │   ├── migrations/               # Database migrations framework
 │   │   ├── 001_create_core_indexes.js
 │   │   ├── 002_seed_indian_wholesale_taxonomy.js
 │   │   └── 003_seed_superadmin_user.js
-│   ├── models/                   # 13 Mongoose ODM schemas (100% MongoDB)
-│   │   ├── Address.js
-│   │   ├── Banner.js
-│   │   ├── Cart.js
-│   │   ├── Category.js
-│   │   ├── Coupon.js
-│   │   ├── Migration.js
-│   │   ├── Order.js
-│   │   ├── Payment.js
-│   │   ├── Product.js
-│   │   ├── Review.js
-│   │   ├── StockHold.js
-│   │   ├── User.js               # Unified customer and admin schema
-│   │   └── Wishlist.js
-│   ├── routes/                   # 12 API Route Handlers
-│   │   ├── accountRoutes.js
-│   │   ├── adminRoutes.js
-│   │   ├── authRoutes.js
-│   │   ├── bannerRoutes.js
-│   │   ├── cartRoutes.js
-│   │   ├── catalogRoutes.js
-│   │   ├── checkoutRoutes.js
-│   │   ├── couponRoutes.js
-│   │   ├── inventoryRoutes.js
-│   │   ├── orderRoutes.js
-│   │   ├── reviewRoutes.js
-│   │   └── uploadRoutes.js
+│   ├── models/                   # Domain-Driven Mongoose ODM Schemas
+│   │   ├── account/
+│   │   │   ├── Address.js        # Multi-tag shipping address book
+│   │   │   └── Wishlist.js       # Customer product wishlists
+│   │   ├── auth/
+│   │   │   └── User.js           # Unified customer & admin schema, bcrypt hashes, roles
+│   │   ├── catalog/
+│   │   │   ├── Category.js       # Taxonomy categories & parent hierarchies
+│   │   │   └── Product.js        # Kirana products, multi-variants & inventory
+│   │   ├── marketing/
+│   │   │   ├── Banner.js         # Promotional hero banners & sliders
+│   │   │   └── Coupon.js         # Discount vouchers, percentage & fixed caps
+│   │   ├── order/
+│   │   │   ├── Cart.js           # Server-side guest & user carts
+│   │   │   ├── Order.js          # Canonical orders, tax breakdown & milestone events
+│   │   │   ├── Payment.js        # Gateway transactions & idempotency ledger
+│   │   │   └── StockHold.js      # 15-min TTL concurrency stock reservations
+│   │   ├── review/
+│   │   │   └── Review.js         # Verified purchase product ratings & reviews
+│   │   └── system/
+│   │       └── Migration.js      # Schema & taxonomy migration ledger
+│   ├── routes/                   # 10 Domain API Route Modules
+│   │   ├── account/
+│   │   │   └── accountRoutes.js  # Customer profile, addresses, wallet & wishlist
+│   │   ├── admin/
+│   │   │   └── adminRoutes.js    # Super Admin metrics, users, order overrides
+│   │   ├── auth/
+│   │   │   └── authRoutes.js     # Register, login, Google OAuth, tokens, OTP
+│   │   ├── catalog/
+│   │   │   └── catalogRoutes.js  # Faceted search, categories, CSV bulk upload
+│   │   ├── inventory/
+│   │   │   └── inventoryRoutes.js# Low stock threshold alerts
+│   │   ├── logistics/
+│   │   │   └── logisticsRoutes.js# Fleet dispatch, pincode serviceability, tracking
+│   │   ├── marketing/
+│   │   │   ├── bannerRoutes.js   # Hero carousel banner management
+│   │   │   └── couponRoutes.js   # Coupon validation & management
+│   │   ├── media/
+│   │   │   └── uploadRoutes.js   # S3 media uploads & presigned URLs
+│   │   ├── order/
+│   │   │   ├── cartRoutes.js     # Shopping cart synchronization
+│   │   │   ├── checkoutRoutes.js # Checkout, Razorpay payments, COD placement
+│   │   │   ├── orderRoutes.js    # Order lifecycle & cancellations
+│   │   │   └── quickCommerceRoutes.js # 10-minute ultra-fast delivery routes
+│   │   └── review/
+│   │       └── reviewRoutes.js   # Customer ratings, reviews & moderation
 │   ├── scripts/                  # Data migration, seeding & verification CLI
 │   │   ├── auditDatabase.js      # Live MongoDB collection document auditor
 │   │   ├── migrate.js            # Migration runner CLI
@@ -1781,9 +1811,263 @@ FreshCart uses standard JWT (JSON Web Token) bearer authentication for securing 
   }
   ```
 
+
 ---
 
-## 8. Environment Variables
+## 8. Domain Controller Architecture & Feature Specifications
+
+FreshCart features a decoupled, Domain-Driven Controller architecture located under `backend/controllers/`. Each domain encapsulates its specific business rules, persistence logic, caching strategies, and third-party integrations.
+
+```text
+backend/controllers/
+├── account/             # Customer Profile, Saved Addresses, Wallet Ledger & Wishlists
+├── admin/               # Super Admin Metrics, User Directory, Order Lifecycle & Restocking
+├── auth/                # Dual-token JWT Authentication, OAuth 2.0, OTP Password Recovery
+├── catalog/             # Faceted Product Search, Category Taxonomy & Streaming CSV Ingestion
+├── inventory/           # Safety Stock Monitoring & Critical Depletion Alerts
+├── logistics/           # Fleet Dispatch, Serviceability Engine & Real-Time Tracking Milestones
+├── marketing/           # Hero Banners, Promo Sliders & Coupon Voucher Engine
+├── media/               # AWS S3 Direct Presigned URLs & Optimized Local WebP Storage Fallback
+├── order/               # Real-time Cart Sync, Concurrency-Safe Checkout & Order State Machine
+└── review/              # Verified Purchase Product Ratings, Reviews & Moderation Queue
+```
+
+---
+
+### 8.1 Authentication & Identity Domain (`auth/authController.js`)
+* **File Location**: `backend/controllers/auth/authController.js`
+* **Service Role**: Manages customer and administrator identity lifecycles, cryptographic credentials, session tokens, and security audits.
+* **Core Technical Capabilities**:
+  * **Dual-Token Architecture**: Issues short-lived access JWTs (`7d`) and long-lived refresh tokens (`30d`) with Redis revocation tracking.
+  * **Bcrypt Password Security**: Enforces 12-round salted hashing for all user passwords.
+  * **Secure OTP Password Reset**: Computes a 6-digit random code stored as a SHA-256 hash in MongoDB with a strict 10-minute expiry window.
+  * **Google OAuth 2.0 Verification**: Verifies Google client identity tokens and automatically creates or syncs customer profiles.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `register` | `POST /api/auth/register` | Public | Validates phone/email uniqueness, hashes password, saves User record, and returns JWT session. |
+  | `login` | `POST /api/auth/login` | Public | Authenticates credentials, checks `isActive` account status, updates `lastLoginAt`, and generates tokens. |
+  | `googleAuth` | `POST /api/auth/google` | Public | Validates Google identity payload; handles zero-friction account creation and session issuance. |
+  | `refreshToken`| `POST /api/auth/refresh-token` | Public | Verifies incoming refresh token against Redis blacklist; rotates and issues fresh access token. |
+  | `logout` | `POST /api/auth/logout` | Authenticated | Blacklists current refresh token in Redis, invalidating any future refresh cycles. |
+  | `requestOtp` | `POST /api/auth/request-otp` | Public | Generates cryptographic OTP for forgot-password flow, records expiration, and sends SMS payload. |
+  | `verifyOtpAndResetPassword` | `POST /api/auth/reset-password` | Public | Validates OTP submission within TTL, enforces minimum password strength, and persists new hash. |
+  | `getMe` | `GET /api/auth/me` | Authenticated | Decodes bearer token and returns current user profile, role flags, and account status. |
+  | `changePassword` | `POST /api/auth/change-password` | Authenticated | Verifies existing password before allowing password updates from account settings. |
+
+---
+
+### 8.2 Customer Account & Wallet Domain (`account/accountController.js`)
+* **File Location**: `backend/controllers/account/accountController.js`
+* **Service Role**: Manages customer profile data, saved shipping addresses, customer wallet ledger, and product wishlists.
+* **Core Technical Capabilities**:
+  * **Saved Address Directory**: Supports multiple shipping addresses tagged as `Home`, `Work`, or `Other` with automatic single-default management.
+  * **In-App Store Wallet Ledger**: High-concurrency wallet balance supporting deposits, cashback credits, debit deductions, and refunds with audit logs.
+  * **Idempotent Wishlist Storage**: Maintains customer favorites using unique MongoDB ObjectId sets to eliminate duplicates.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getProfile` | `GET /api/account/profile` | Customer | Returns profile attributes, active orders tally, saved address count, and wallet balance. |
+  | `updateProfile` | `PUT /api/account/profile` | Customer | Updates customer name, email address, and notification preferences. |
+  | `getAddresses` | `GET /api/account/addresses` | Customer | Fetches all saved shipping addresses associated with the authenticated customer. |
+  | `addAddress` | `POST /api/account/addresses` | Customer | Validates 6-digit Indian pincode, recipient phone, and creates new address (sets default if first). |
+  | `updateAddress` | `PUT /api/account/addresses/:id`| Customer | Updates specific address fields or promotes address to primary default. |
+  | `deleteAddress` | `DELETE /api/account/addresses/:id`| Customer | Removes address; automatically re-assigns default flag to another address if needed. |
+  | `setDefaultAddress` | `PUT /api/account/addresses/:id/default`| Customer | Atomically unsets previous default and sets specified address as active primary. |
+  | `getWallet` | `GET /api/account/wallet` | Customer | Returns real-time wallet balance and itemized chronological transaction ledger. |
+  | `addWalletFunds` | `POST /api/account/wallet/add` | Customer | Credits customer wallet balance with test/gateway funds. |
+  | `getWishlist` | `GET /api/account/wishlist` | Customer | Fetches populated products and active variant pricing saved to customer wishlist. |
+  | `addToWishlist` | `POST /api/account/wishlist/:productId`| Customer | Adds product to customer wishlist idempotently. |
+  | `removeFromWishlist`| `DELETE /api/account/wishlist/:productId`| Customer | Removes specified product from customer wishlist. |
+
+---
+
+### 8.3 Catalog & Search Domain (`catalog/catalogController.js`)
+* **File Location**: `backend/controllers/catalog/catalogController.js`
+* **Service Role**: Powers product discovery, faceted search filtering, category hierarchies, and bulk catalog ingestion.
+* **Core Technical Capabilities**:
+  * **High-Speed Redis Query Caching**: Caches public search queries, category trees, and product listings with automatic invalidation.
+  * **Faceted Search Engine**: Dynamically filters by category slug, brand, price slider range, in-stock availability, and sorting modes (`price_asc`, `price_desc`, `rating`, `newest`).
+  * **Streaming CSV Parser**: Enables bulk catalog creation and updates via chunked CSV uploads, handling thousands of SKU rows without memory spikes.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getProducts` | `GET /api/catalog/products` | Public | Paginated product browsing with multi-field search (`q`), category filters, and price ranges. |
+  | `getProductBySlug` | `GET /api/catalog/products/:slug` | Public | Detailed PDP data including variant stock quantities, safety margins, images, and review summaries. |
+  | `getCategories` | `GET /api/catalog/categories` | Public | Category tree with display ordering, thumbnail URLs, and active product counts. |
+  | `getCategoryBySlug`| `GET /api/catalog/categories/:slug`| Public | Returns category metadata and subcategory references. |
+  | `searchAutocomplete`| `GET /api/catalog/search/autocomplete`| Public | Low-latency typeahead search querying indexed product titles, brands, and categories. |
+  | `bulkUploadCsv` | `POST /api/catalog/admin/bulk-upload`| Super Admin | Streaming multipart CSV ingestion validating barcodes, SKUs, wholesale pricing, and stock. |
+
+---
+
+### 8.4 Shopping Cart Domain (`order/cartController.js`)
+* **File Location**: `backend/controllers/order/cartController.js`
+* **Service Role**: Synchronizes server-side shopping carts for both authenticated customers and guest browser sessions.
+* **Core Technical Capabilities**:
+  * **Dual Session Support**: Seamlessly persists cart contents for anonymous guests (`x-session-token`) or authenticated user accounts.
+  * **Live Stock Validation**: Checks live variant quantities against warehouse inventory to prevent adding out-of-stock items.
+  * **Automatic Guest Cart Merging**: Merges anonymous session items into the authenticated customer's cart upon login.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getCart` | `GET /api/cart` | Public / Session | Retrieves active cart, populating current variant details, live stock, and calculating subtotal. |
+  | `addToCart` | `POST /api/cart/items` | Public / Session | Adds variant to cart; validates maximum order quantities and real-time inventory limits. |
+  | `updateCartItem` | `PUT /api/cart/items/:variantId` | Public / Session | Updates quantity of a specific cart item; verifies stock boundary availability. |
+  | `removeCartItem` | `DELETE /api/cart/items/:variantId` | Public / Session | Removes single variant item from cart. |
+  | `clearCart` | `DELETE /api/cart` | Public / Session | Empties all items from the current cart. |
+  | `syncGuestCart` | `POST /api/cart/sync` | Authenticated | Merges guest cart items into authenticated user profile upon successful sign-in. |
+
+---
+
+### 8.5 Checkout & Payments Domain (`order/checkoutController.js`)
+* **File Location**: `backend/controllers/order/checkoutController.js`
+* **Service Role**: The financial and transactional core managing canonical price calculations, temporary inventory holds, payment gateway handshakes, and webhook fulfillment.
+* **Core Technical Capabilities**:
+  * **Canonical Server-Side Pricing**: Recalculates line items and totals exclusively on the server in integer paise (₹0.01) to completely eliminate client-side price manipulation.
+  * **Indian GST Tax Calculator**: Automatically splits taxes into CGST + SGST (intra-state) or IGST (inter-state) based on store state and destination state.
+  * **15-Minute Concurrency Stock Holds (`StockHold`)**: Places temporary TTL holds on variants during checkout to prevent overselling during high-traffic flash sales.
+  * **Razorpay Payment Integration**: Generates official Razorpay orders, verifies HMAC-SHA256 signatures, and processes asynchronous webhooks (`payment.captured`, `order.paid`).
+  * **Cash on Delivery (COD) Anti-Fraud Risk Engine**: Enforces strict checks: valid 6-digit Indian pincode format, maximum ₹10,000 order value cap, and customer account block status.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `initializeCheckout` | `POST /api/checkout/initialize` | Authenticated | Calculates canonical prices & GST, validates delivery pincode, establishes 15-min stock holds. |
+  | `createRazorpayOrder`| `POST /api/checkout/razorpay/order`| Authenticated | Generates Razorpay Order ID (or sandbox mock) and returns credentials for checkout modal. |
+  | `verifyPayment` | `POST /api/checkout/razorpay/verify`| Authenticated | Validates cryptographic payment signature, commits stock holds into orders, and clears cart. |
+  | `handleRazorpayWebhook`| `POST /api/checkout/webhook` | Public (Signed) | Asynchronous webhook processor verifying signature to guarantee idempotent order fulfillment. |
+  | `placeCodOrder` | `POST /api/checkout/cod` | Authenticated | Runs COD anti-fraud engine, reserves stock, creates order in 'unpaid' state, and empties cart. |
+
+---
+
+### 8.6 Order Management & Tracking Domain (`order/orderController.js`)
+* **File Location**: `backend/controllers/order/orderController.js`
+* **Service Role**: Manages order life cycles, customer order history, automated stock restorations on cancellation, and live delivery status timelines.
+* **Core Technical Capabilities**:
+  * **Immutable Order Snapshots**: Stores historical snapshots of product titles, variant SKUs, and purchased unit prices so future catalog updates don't alter past receipts.
+  * **Atomic Cancellation & Inventory Restoration**: Automatically increments warehouse variant stock when an order is cancelled before fulfillment.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getMyOrders` | `GET /api/orders/my-orders` | Customer | Returns customer's chronological order history with delivery status and milestone trackers. |
+  | `getOrderById` | `GET /api/orders/:id` | Customer / Admin | Returns itemized order invoice, applied tax details, shipping address, and payment status. |
+  | `cancelOrder` | `POST /api/orders/:id/cancel` | Customer / Admin | Cancels order (if pending/packed), initiates wallet/payment refund, and restores variant inventory. |
+  | `trackOrder` | `GET /api/orders/track/:orderNumber` | Public / Customer | Returns live quick-commerce delivery tracker milestones and assigned driver details. |
+
+---
+
+### 8.7 Inventory Control Domain (`inventory/inventoryController.js`)
+* **File Location**: `backend/controllers/inventory/inventoryController.js`
+* **Service Role**: Oversees warehouse SKU stock quantities and automated alerts for supply-chain replenishment.
+* **Core Technical Capabilities**:
+  * **Safety Margin Auditing**: Evaluates `stockQuantity` against `safetyStock` per variant SKU across the entire product catalog.
+  * **Low Stock Alerts**: Identifies impending stock-outs and flags items requiring urgent purchase orders.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getLowStockAlerts` | `GET /api/inventory/low-stock` | Super Admin | Scans all variants and returns urgent deficit alerts grouped by product and SKU. |
+
+---
+
+### 8.8 Logistics & Fulfillment Domain (`logistics/logisticsController.js`)
+* **File Location**: `backend/controllers/logistics/logisticsController.js`
+* **Service Role**: Controls in-house delivery fleet dispatch, delivery serviceability checks, tracking milestones, and shipping fee calculation.
+* **Core Technical Capabilities**:
+  * **Pincode Serviceability Matrix**: Verifies destination postal code against warehouse delivery radii to determine express eligibility and transit windows.
+  * **Step-by-Step Delivery Milestones**: Tracks shipment progression through `pending` ➔ `packed` ➔ `dispatched` ➔ `out_for_delivery` ➔ `delivered`.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `checkPincodeServiceability`| `GET /api/logistics/serviceability/:pincode`| Public | Returns estimated delivery days, delivery charge, and express dispatch capability. |
+  | `dispatchOrder` | `POST /api/logistics/dispatch` | Super Admin | Assigns fleet runner, generates tracking code, and marks order as dispatched. |
+  | `updateShipmentStatus`| `PUT /api/logistics/shipment-status` | Super Admin / Fleet | Updates tracking status and logs delivery driver timestamp. |
+  | `getLiveTracking` | `GET /api/logistics/track/:trackingCode`| Public / Customer | Fetches real-time milestone timeline for customer tracking view. |
+
+---
+
+### 8.9 Marketing: Banners & Sliders Domain (`marketing/bannerController.js`)
+* **File Location**: `backend/controllers/marketing/bannerController.js`
+* **Service Role**: Manages storefront marketing real estate including responsive hero carousels and promotional discount tiles.
+* **Core Technical Capabilities**:
+  * **Display Priority Ordering**: Renders banners ordered by sequential display index.
+  * **Status Toggling**: Supports fast activation and deactivation of seasonal campaign banners.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getBanners` | `GET /api/banners` | Public | Returns all active promotional banners sorted by display priority for storefront sliders. |
+  | `createBanner` | `POST /api/banners` | Super Admin | Creates promotional banner with headline, image URL, redirect link, and display order. |
+  | `updateBanner` | `PUT /api/banners/:id` | Super Admin | Modifies banner parameters, visual asset URL, or active state. |
+  | `deleteBanner` | `DELETE /api/banners/:id` | Super Admin | Permanently deletes promotional banner from carousel. |
+
+---
+
+### 8.10 Marketing: Coupons & Vouchers Domain (`marketing/couponController.js`)
+* **File Location**: `backend/controllers/marketing/couponController.js`
+* **Service Role**: Manages promotional voucher codes, discount calculations, usage restrictions, and redemption limits.
+* **Core Technical Capabilities**:
+  * **Dual Discount Models**: Supports both `percentage` discounts (with optional maximum discount caps) and `fixed` cash discounts.
+  * **Comprehensive Eligibility Validation**: Validates voucher active status, expiration date, minimum cart order value, total coupon usage caps, and per-user redemption limits.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `validateCoupon` | `POST /api/coupons/validate` | Public / Session | Tests voucher code against current cart value; returns calculated discount amount and status. |
+  | `listCoupons` | `GET /api/coupons` | Super Admin | Lists all promo codes with redemption counts, limits, and expiry dates. |
+  | `createCoupon` | `POST /api/coupons` | Super Admin | Creates new coupon code with discount percentage/fixed value, caps, and expiry. |
+  | `deleteCoupon` | `DELETE /api/coupons/:id` | Super Admin | Deactivates or removes discount coupon from system. |
+
+---
+
+### 8.11 Media Upload & Cloud Storage Domain (`media/uploadController.js`)
+* **File Location**: `backend/controllers/media/uploadController.js`
+* **Service Role**: Handles media ingestion, image format optimization, and cloud storage handshakes.
+* **Core Technical Capabilities**:
+  * **AWS S3 + Local Fallback**: Automatically uploads files to Amazon S3 buckets; if AWS credentials are not configured, seamlessly falls back to storing assets in `backend/uploads/`.
+  * **Presigned PUT URL Generation**: Generates temporary 60-second AWS S3 presigned URLs allowing client browsers to upload media directly to S3, bypassing Node.js server RAM and CPU buffers.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `uploadMediaAsset` | `POST /api/uploads/media` | Authenticated | Processes multipart file upload (product images/banners), converts to WebP, and saves to S3/local. |
+  | `getPresignedUploadUrl`| `POST /api/uploads/presigned-url`| Authenticated | Issues AWS S3 presigned URL for direct client-to-bucket upload bypass. |
+
+---
+
+### 8.12 Ratings & Product Reviews Domain (`review/reviewController.js`)
+* **File Location**: `backend/controllers/review/reviewController.js`
+* **Service Role**: Powers customer feedback loops, star ratings, buyer verification, and administrative moderation.
+* **Core Technical Capabilities**:
+  * **Verified Buyer Verification**: Automatically inspects customer order history to mark reviews with a trusted "Verified Purchase" badge.
+  * **Dynamic Average Rating Updates**: Recalculates product overall rating score and review tally upon review approval.
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getProductReviews` | `GET /api/reviews/product/:productId`| Public | Returns approved reviews, 1-5 star distribution rating breakdown, and verified buyer badges. |
+  | `createReview` | `POST /api/reviews` | Customer | Creates product review and star rating; checks purchase history to attach verified badge. |
+  | `moderateReview` | `PUT /api/reviews/:id/moderate` | Super Admin | Approves or rejects customer review submissions in the moderation queue. |
+  | `deleteReview` | `DELETE /api/reviews/:id` | Super Admin | Deletes inappropriate reviews and recalculates product rating averages. |
+
+---
+
+### 8.13 Administration & Business Analytics Domain (`admin/adminController.js`)
+* **File Location**: `backend/controllers/admin/adminController.js`
+* **Service Role**: Super Admin command center providing financial analytics, order fulfillment overrides, customer user management, and bulk inventory restocking.
+* **Core Technical Capabilities**:
+  * **Financial & Operations Telemetry**: Computes gross merchandise value (GMV), total completed orders, active customer counts, average order value (AOV), and today's sales.
+  * **Time-Series Chart Aggregations**: Generates daily, weekly, and monthly revenue aggregations for dashboard charts.
+  * **Customer Risk Overrides**: Enables banning abusive accounts or selectively toggling Cash on Delivery privileges (`codBlocked`).
+* **Method Breakdown**:
+  | Method | Route | Access | Key Responsibilities & Logic |
+  | :--- | :--- | :---: | :--- |
+  | `getDashboardMetrics` | `GET /api/admin/metrics` | Super Admin | Computes platform KPI cards: total revenue, order count, registered users, and low stock count. |
+  | `getRevenueTrends` | `GET /api/admin/revenue-trends` | Super Admin | Aggregates time-series revenue and order volume for dashboard analytics charts. |
+  | `getAllOrders` | `GET /api/admin/orders` | Super Admin | Paginated administrative order browser with filters by status, payment method, and date range. |
+  | `updateOrderStatus` | `PUT /api/admin/orders/:id/status`| Super Admin | Overrides order status (`pending`, `packed`, `delivered`, `cancelled`) with stock restoration. |
+  | `getAllUsers` | `GET /api/admin/users` | Super Admin | Lists all registered customers with lifetime spend, order count, and account status flags. |
+  | `toggleUserStatus` | `PUT /api/admin/users/:id/status` | Super Admin | Toggles active status or disables Cash on Delivery (COD) for risky customer accounts. |
+  | `bulkRestock` | `POST /api/admin/inventory/bulk-restock`| Super Admin | Updates stock quantities across multiple variant SKUs simultaneously. |
+
+---
+
+## 9. Environment Variables
 
 ### Backend (`backend/.env`)
 ```ini
@@ -1793,18 +2077,37 @@ NODE_ENV=development
 
 # JWT Security
 JWT_SECRET=super-secret-shop-jwt-key-2026-production-grade
+JWT_EXPIRES_IN=7d
+JWT_REFRESH_SECRET=super-secret-shop-jwt-refresh-key-2026-production-grade
+JWT_REFRESH_EXPIRES_IN=30d
 
 # MongoDB Atlas or Local Database
 MONGODB_URI=mongodb://127.0.0.1:27017/shop
 
-# Redis Caching (Optional - falls back to in-memory)
+# Redis Caching (Optional - falls back to high-speed in-memory engine)
 REDIS_URL=redis://127.0.0.1:6379
 
-# AWS S3 Cloud Storage (Optional - falls back to local uploads)
+# Razorpay Payment Gateway (Optional - falls back to mock sandbox mode)
+RAZORPAY_KEY_ID=rzp_test_YOUR_KEY_ID
+RAZORPAY_KEY_SECRET=YOUR_KEY_SECRET
+RAZORPAY_WEBHOOK_SECRET=YOUR_WEBHOOK_SECRET
+
+# AWS S3 Cloud Storage (Optional - falls back to local uploads/ directory)
 AWS_ACCESS_KEY_ID=your-aws-access-key-id
 AWS_SECRET_ACCESS_KEY=your-aws-secret-access-key
 AWS_REGION=ap-south-1
-AWS_S3_BUCKET=freshcart-production-assets
+AWS_S3_BUCKET=freshcart-production-media-assets
+CLOUDFRONT_URL=https://d123456abcdef8.cloudfront.net
+
+# Store Location & Tax (Indian GST)
+STORE_STATE=Maharashtra
+STORE_PINCODE=400001
+MAX_COD_AMOUNT=10000
+
+# Logistics Fleet
+FLEET_NAME=FreshCart Express Fleet
+WAREHOUSE_ADDRESS=Central Fulfillment Hub, Sector 4, Ghaziabad, UP - 201014
+SUPPORT_PHONE=1800-FRESH-CART
 ```
 
 ### Client (`client/.env`)
@@ -1814,7 +2117,7 @@ VITE_API_URL=http://localhost:3000
 
 ---
 
-## 9. Quickstart & Local Development
+## 10. Quickstart & Local Development
 
 ### Prerequisites
 - **Node.js**: v18.0.0 or higher
@@ -1856,7 +2159,7 @@ npm run dev
 
 ---
 
-## 10. Production Deployment (AWS EC2 + PM2 + Nginx)
+## 11. Production Deployment (AWS EC2 + PM2 + Nginx)
 
 1. **Build Client Bundle**:
    ```bash

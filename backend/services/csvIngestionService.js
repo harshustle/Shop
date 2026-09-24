@@ -1,7 +1,7 @@
 const fs = require('fs');
 const csv = require('csv-parser');
-const Product = require('../models/Product');
-const Category = require('../models/Category');
+const Product = require('../models/catalog/Product');
+const Category = require('../models/catalog/Category');
 const { v4: uuidv4 } = require('uuid');
 
 const jobsStore = new Map();
