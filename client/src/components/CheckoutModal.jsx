@@ -134,6 +134,12 @@ const CheckoutModal = ({ isOpen, onClose }) => {
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     };
 
+    if (selectedLocation && selectedLocation.isDeliverable === false) {
+      setError('Selected address is outside our delivery zone. Please choose an address within our delivery polygon.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
       // 1. If Cash on Delivery, check anti-fraud serviceability first
       if (formData.paymentMethod === 'cod') {

@@ -4,13 +4,13 @@ const bcrypt = require('bcrypt');
 const userSchema = new mongoose.Schema({
     phone: {
         type: String,
-        required: [function() { return !this.googleId; }, 'Mobile phone number is required'],
+        required: [function() { return !this.googleId && !this.email; }, 'Mobile phone number or email is required'],
         unique: true,
         sparse: true,
         trim: true,
         validate: {
             validator: function(v) {
-                if (!v && this.googleId) return true;
+                if (!v && (this.googleId || this.email)) return true;
                 return /^[6-9]\d{9}$/.test(v);
             },
             message: 'Please enter a valid 10-digit Indian mobile number (e.g. 9876543210)'
@@ -27,6 +27,7 @@ const userSchema = new mongoose.Schema({
     },
     email: {
         type: String,
+        unique: true,
         sparse: true,
         lowercase: true,
         trim: true,

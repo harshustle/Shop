@@ -77,6 +77,7 @@ app.use('/api/account', accountRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/qcommerce', quickCommerceRoutes);
+app.use('/api/delivery-zone', quickCommerceRoutes);
 
 // Aliases for v1 specifications
 app.use('/api/v1/checkout', checkoutRoutes);

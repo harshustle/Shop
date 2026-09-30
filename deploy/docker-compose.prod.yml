@@ -8,10 +8,14 @@ services:
       dockerfile: Dockerfile
     container_name: freshcart-api
     restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ../backend/.env
     environment:
       - PORT=3000
       - NODE_ENV=production
-      - MONGODB_URI=${MONGODB_URI}
+      - MONGODB_URI=mongodb://mongodb:27017/shop
       - REDIS_URL=redis://redis:6379
       - JWT_SECRET=${JWT_SECRET}
       - AWS_S3_BUCKET=${AWS_S3_BUCKET}
@@ -22,6 +26,17 @@ services:
       - ../backend/uploads:/var/www/freshcart/backend/uploads
     depends_on:
       - redis
+      - mongodb
+    networks:
+      - freshcart-network
+
+  # MongoDB Document Database
+  mongodb:
+    image: mongo:7
+    container_name: freshcart-mongodb
+    restart: always
+    volumes:
+      - mongo-data:/data/db
     networks:
       - freshcart-network
 
@@ -59,3 +74,4 @@ networks:
 
 volumes:
   redis-data:
+  mongo-data:

@@ -186,6 +186,7 @@ end
 10. **Staff & RBAC:** Sub-admin accounts with role permissions.
 11. **Store Settings:** Payment gateway keys, warehouse addresses, tax rates.
 12. **CMS & Banners:** Hero banner slides and store promotional announcements.
+13. **Delivery Geofence & Polygon Manager:** Interactive Leaflet GIS map with custom polygon drawing, vertex dragging, radius generator, Turf.js Point-in-Polygon boundary verification, and delivery zone enforcement.
 
 ---
 
@@ -197,3 +198,36 @@ end
   * MongoDB Atlas PITR (RPO < 1 min, RTO < 15 min).
   * S3 Cross-Region Replication (CRR) from Mumbai to Singapore.
   * Redis automated snapshots with Multi-AZ automatic failover (< 15s).
+
+---
+
+## 9. Hyperlocal Quick-Commerce Geofencing & Polygon Delivery Engine
+
+### 9.1 Overview & Operational Objectives
+To support strict quick-commerce logistics (10-15 minute delivery SLA), FreshCart implements an enterprise-grade **Polygon Geofencing Engine**. Store administrators can draw, edit, and enforce exact delivery boundaries on an interactive map. Checkout is strictly limited to customers whose delivery address falls within the active polygon boundary.
+
+### 9.2 Architecture & Tech Stack
+* **Client Mapping & GIS:** Leaflet.js (`leaflet`) + Turf.js (`@turf/turf`).
+* **Spatial Data Format:** Standard GeoJSON `Polygon` (`coordinates: [[[lng, lat], ...]]`).
+* **Algorithm:** `turf.booleanPointInPolygon` (Ray-casting / PIP) + `turf.distance` for geodesic distance calculation.
+* **Database Persistence:** Mongoose `DeliveryZone` schema stored in MongoDB.
+* **In-Memory Cache:** `quickCommerceRedis.js` caches active polygon in Redis RAM for zero-latency checkout validation.
+
+### 9.3 Administrative GIS Capabilities (`DeliveryZoneManager.jsx`)
+* **Draw Points Mode:** Interactive polygon creation by clicking boundary vertices on the map.
+* **Drag Vertices Mode:** Numbered draggable vertex handles for fine-tuning borders around rivers, highways, and colonies.
+* **Radius Generator Mode:** Smooth 36-sided circle polygon generation with 1 km - 25 km slider around dark store hub.
+* **Point-in-Polygon Simulator:** Drop a test pin anywhere to verify deliverability, distance from hub, and estimated ETA.
+* **Geocoding Search:** Integrated Nominatim search to center the map on any city, town, or landmark.
+* **Real-time Telemetry:** Live calculation of total serviceable area in $km^2$ via `turf.area` and vertex count.
+
+### 9.4 Storefront Enforcement
+* **Interactive Map Modal (`LocationPickerModal.jsx`):** Renders the active polygon with an emerald boundary. As the user pans the map pin, real-time Turf.js calculations toggle between `SERVICEABLE AREA` and `OUT OF DELIVERY ZONE`, disabling confirmation for out-of-boundary locations.
+* **Checkout Funnel (`CheckoutModal.jsx`):** Validates address deliverability on order submission, blocking orders placed outside the geofence perimeter.
+
+### 9.5 REST API Specification
+* `GET /api/delivery-zone/delivery-zone` &mdash; Returns the active delivery zone metadata and GeoJSON polygon.
+* `POST /api/delivery-zone/delivery-zone` &mdash; Creates or updates the active delivery zone and syncs with Redis.
+* `POST /api/delivery-zone/logistics/geofence` &mdash; Validates customer coordinates `[lat, lng]` against the active polygon.
+* `DELETE /api/delivery-zone/delivery-zone/:id` &mdash; Deletes a delivery zone configuration.
+

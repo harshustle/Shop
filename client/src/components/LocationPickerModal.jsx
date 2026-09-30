@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import L from 'leaflet';
+import * as turf from '@turf/turf';
 import { 
   Crosshair, 
   ArrowRight, 
@@ -10,9 +11,11 @@ import {
   Phone, 
   Home, 
   AlertCircle, 
-  X 
+  X,
+  ShieldCheck
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { API_URL } from '../config';
 
 // Quick commerce operational hubs (Kushinagar, UP)
 const SERVICE_AREAS = {
@@ -80,11 +83,56 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
     return selectedLocation?.flatNumber || selectedLocation?.landmark || '';
   });
   const [errorMessage, setErrorMessage] = useState('');
+  const [activeZone, setActiveZone] = useState(null);
+  const [isDeliverable, setIsDeliverable] = useState(true);
+  const [distanceKm, setDistanceKm] = useState(0.5);
 
   // Map DOM refs
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
+  const zonePolygonLayerRef = useRef(null);
   const debounceTimerRef = useRef(null);
+
+  // Fetch active delivery zone polygon from backend
+  useEffect(() => {
+    if (!isOpen) return;
+    const fetchZone = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/delivery-zone/delivery-zone`);
+        const data = await res.json();
+        if (data.success && data.zone) {
+          setActiveZone(data.zone);
+        }
+      } catch (e) {
+        console.error('Failed to load active delivery zone:', e);
+      }
+    };
+    fetchZone();
+  }, [isOpen]);
+
+  // Point-in-polygon verification via Turf
+  const checkDeliverability = useCallback((lat, lng, zone) => {
+    if (!zone || !zone.polygon || !zone.polygon.coordinates || !zone.polygon.coordinates[0]) {
+      setIsDeliverable(true);
+      return true;
+    }
+    try {
+      const pt = turf.point([lng, lat]);
+      const poly = turf.polygon(zone.polygon.coordinates);
+      const inside = turf.booleanPointInPolygon(pt, poly);
+      setIsDeliverable(inside);
+
+      if (zone.center) {
+        const hubPt = turf.point([zone.center.lng, zone.center.lat]);
+        const dist = parseFloat(turf.distance(hubPt, pt, { units: 'kilometers' }).toFixed(2));
+        setDistanceKm(dist);
+      }
+      return inside;
+    } catch (e) {
+      setIsDeliverable(true);
+      return true;
+    }
+  }, []);
 
   // Reset step to 'location' whenever modal is opened
   useEffect(() => {
@@ -146,7 +194,7 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
 
       const map = L.map(mapContainerRef.current, {
         center: [initialLat, initialLng],
-        zoom: 16,
+        zoom: 15,
         zoomControl: false,
         attributionControl: false
       });
@@ -155,12 +203,30 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
         maxZoom: 19
       }).addTo(map);
 
+      // Draw active delivery polygon if loaded
+      if (activeZone && activeZone.polygon && activeZone.polygon.coordinates && activeZone.polygon.coordinates[0]) {
+        const ring = activeZone.polygon.coordinates[0];
+        const latLngs = ring.map(c => [c[1], c[0]]);
+
+        zonePolygonLayerRef.current = L.polygon(latLngs, {
+          color: '#00875A',
+          weight: 3,
+          opacity: 0.9,
+          fillColor: '#00B074',
+          fillOpacity: 0.18,
+          dashArray: '6, 6'
+        }).addTo(map);
+      }
+
+      checkDeliverability(initialLat, initialLng, activeZone);
+
       map.on('moveend', () => {
         const center = map.getCenter();
         const newLat = center.lat;
         const newLng = center.lng;
 
         setCurrentCoords({ lat: newLat, lng: newLng });
+        checkDeliverability(newLat, newLng, activeZone);
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {
@@ -186,7 +252,34 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
         mapInstanceRef.current = null;
       }
     };
-  }, [isOpen, step, activeArea, reverseGeocode]);
+  }, [isOpen, step, activeArea, reverseGeocode, activeZone, checkDeliverability]);
+
+  // Sync Polygon layer when activeZone updates
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !activeZone) return;
+
+    if (zonePolygonLayerRef.current) {
+      zonePolygonLayerRef.current.remove();
+      zonePolygonLayerRef.current = null;
+    }
+
+    if (activeZone.polygon && activeZone.polygon.coordinates && activeZone.polygon.coordinates[0]) {
+      const ring = activeZone.polygon.coordinates[0];
+      const latLngs = ring.map(c => [c[1], c[0]]);
+
+      zonePolygonLayerRef.current = L.polygon(latLngs, {
+        color: '#00875A',
+        weight: 3,
+        opacity: 0.9,
+        fillColor: '#00B074',
+        fillOpacity: 0.18,
+        dashArray: '6, 6'
+      }).addTo(map);
+
+      checkDeliverability(currentCoords.lat, currentCoords.lng, activeZone);
+    }
+  }, [activeZone, checkDeliverability, currentCoords.lat, currentCoords.lng]);
 
   // Switch between TAMKUHI RAJ & SEWARAHI
   const handleSelectArea = (areaKey) => {
@@ -239,6 +332,10 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
 
   // Step 1: Confirm Location on Map -> Advance to Step 2 (Delivery Details)
   const handleProceedToDetails = () => {
+    if (!isDeliverable) {
+      setErrorMessage('Selected location is outside our active delivery polygon. Please pan the map inside the green service zone.');
+      return;
+    }
     setErrorMessage('');
     setStep('details');
   };
@@ -282,9 +379,9 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
       city: areaObj.city,
       state: areaObj.state,
       postalCode: areaObj.postalCode,
-      isDeliverable: true,
-      distanceKm: 0.5,
-      etaMinutes: 10
+      isDeliverable: isDeliverable,
+      distanceKm: distanceKm || 0.5,
+      etaMinutes: isDeliverable ? (distanceKm <= 2 ? 10 : distanceKm <= 4 ? 12 : 15) : null
     };
 
     // Save in Cart Context and local storage
@@ -381,10 +478,27 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
 
             {/* Bottom Sheet Card: Step 1 Confirmation */}
             <div className="relative z-[400] bg-white rounded-t-[32px] sm:rounded-3xl p-6 sm:p-7 shadow-[0_-10px_35px_rgba(0,0,0,0.12)] border-t border-slate-100 space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-black uppercase tracking-wider">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>SERVICEABLE AREA</span>
+              <div className="flex items-center justify-between">
+                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                  isDeliverable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                }`}>
+                  <span className={`w-2 h-2 rounded-full ${isDeliverable ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                  <span>{isDeliverable ? 'SERVICEABLE AREA' : 'OUT OF DELIVERY ZONE'}</span>
+                </div>
+
+                {isDeliverable && (
+                  <span className="text-[11px] font-bold text-slate-400">
+                    ~{distanceKm} km from hub
+                  </span>
+                )}
               </div>
+
+              {!isDeliverable && (
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl text-xs font-bold text-rose-800 flex items-start gap-2">
+                  <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                  <span>Hum sirf marked green polygon boundary ke andar delivery karte hain. Kripya map ko delivery zone ke andar drag karein.</span>
+                </div>
+              )}
 
               <div className="space-y-1">
                 <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
@@ -397,11 +511,16 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
 
               <button
                 type="button"
+                disabled={!isDeliverable}
                 onClick={handleProceedToDetails}
-                className="w-full py-4 bg-[#E11449] hover:bg-[#c90f3e] text-white rounded-2xl text-base font-black tracking-wide transition flex items-center justify-center gap-2 shadow-xl shadow-[#E11449]/30 active:scale-[0.98]"
+                className={`w-full py-4 rounded-2xl text-base font-black tracking-wide transition flex items-center justify-center gap-2 ${
+                  isDeliverable
+                    ? 'bg-[#E11449] hover:bg-[#c90f3e] text-white shadow-xl shadow-[#E11449]/30 active:scale-[0.98]'
+                    : 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                }`}
               >
-                <span>Confirm Location</span>
-                <ArrowRight size={20} className="stroke-[2.5]" />
+                <span>{isDeliverable ? 'Confirm Location' : 'Location Not Deliverable'}</span>
+                {isDeliverable && <ArrowRight size={20} className="stroke-[2.5]" />}
               </button>
             </div>
 

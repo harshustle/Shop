@@ -886,9 +886,40 @@ class QuickCommerceRedis {
     }
 
     /**
+     * Set Active Custom Delivery Zone
+     */
+    setActiveDeliveryZone(zoneData) {
+        this.activeDeliveryZone = zoneData;
+        if (this.client && this.isConnected) {
+            this.client.set('freshcart:active_delivery_zone', JSON.stringify(zoneData)).catch(() => {});
+        }
+    }
+
+    /**
+     * Get Active Delivery Zone
+     */
+    getActiveDeliveryZone() {
+        return this.activeDeliveryZone || null;
+    }
+
+    /**
      * Store Hub Metadata & Turf GeoJSON Perimeter
      */
     getStoreHubInfo() {
+        if (this.activeDeliveryZone && this.activeDeliveryZone.polygon) {
+            return {
+                id: 'custom_zone_' + (this.activeDeliveryZone._id || '1'),
+                name: this.activeDeliveryZone.name || DARK_STORE_HUB.name,
+                hubName: this.activeDeliveryZone.hubName || DARK_STORE_HUB.name,
+                address: this.activeDeliveryZone.hubAddress || DARK_STORE_HUB.address,
+                lat: this.activeDeliveryZone.center?.lat || DARK_STORE_HUB.lat,
+                lng: this.activeDeliveryZone.center?.lng || DARK_STORE_HUB.lng,
+                deliveryRadiusKm: this.activeDeliveryZone.radiusKm || DARK_STORE_HUB.deliveryRadiusKm,
+                estimatedDeliveryMinutes: this.activeDeliveryZone.estimatedDeliveryMinutes || 12,
+                zoneGeoJSON: this.activeDeliveryZone.polygon
+            };
+        }
+
         const hubPoint = turf.point([DARK_STORE_HUB.lng, DARK_STORE_HUB.lat]);
         const zonePolygon = turf.circle(hubPoint, DARK_STORE_HUB.deliveryRadiusKm, {
             steps: 64,
@@ -926,11 +957,29 @@ class QuickCommerceRedis {
             // Precise geodesic distance calculation via Turf
             const distanceKm = parseFloat(turf.distance(hubPoint, customerPoint, { units: 'kilometers' }).toFixed(2));
 
-            // Precise point-in-polygon geofence boundary test via Turf
-            const deliveryPolygon = customPolygon || turf.circle(hubPoint, Number(maxRadiusKm), {
-                steps: 64,
-                units: 'kilometers'
-            });
+            // Determine polygon boundary
+            let activePoly = customPolygon;
+            if (!activePoly && this.activeDeliveryZone && this.activeDeliveryZone.polygon) {
+                activePoly = this.activeDeliveryZone.polygon;
+            }
+
+            let deliveryPolygon;
+            if (activePoly) {
+                if (activePoly.type === 'Feature') {
+                    deliveryPolygon = activePoly;
+                } else if (activePoly.type === 'Polygon') {
+                    deliveryPolygon = turf.polygon(activePoly.coordinates);
+                } else if (Array.isArray(activePoly)) {
+                    deliveryPolygon = turf.polygon([activePoly]);
+                } else {
+                    deliveryPolygon = activePoly;
+                }
+            } else {
+                deliveryPolygon = turf.circle(hubPoint, Number(maxRadiusKm), {
+                    steps: 64,
+                    units: 'kilometers'
+                });
+            }
 
             const withinBoundary = turf.booleanPointInPolygon(customerPoint, deliveryPolygon);
 

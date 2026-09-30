@@ -43,9 +43,11 @@ import {
   Tag,
   MessageSquare,
   Image as ImageIcon,
-  Star
+  Star,
+  Navigation
 } from 'lucide-react';
 import { API_URL } from '../config';
+import DeliveryZoneManager from '../components/admin/DeliveryZoneManager';
 
 const AdminPanel = () => {
   const navigate = useNavigate();
@@ -839,6 +841,21 @@ const AdminPanel = () => {
                   <ImageIcon size={18} />
                 </div>
                 <span>Hero Banners</span>
+              </button>
+
+              {/* Delivery Geofence Zones */}
+              <button
+                onClick={() => setActiveTab('delivery-zone')}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-semibold transition-all ${
+                  activeTab === 'delivery-zone'
+                    ? 'bg-[#E8F8F0] text-[#00B074] font-bold shadow-xs'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                <div className={`w-5 h-5 flex items-center justify-center ${activeTab === 'delivery-zone' ? 'text-[#00B074]' : 'text-slate-400'}`}>
+                  <Navigation size={18} />
+                </div>
+                <span>Delivery Zones</span>
               </button>
 
               {/* Reports & Analytics */}
@@ -2256,6 +2273,15 @@ const AdminPanel = () => {
                 </div>
               </form>
             </div>
+          </main>
+        )}
+
+        {/* ===================================================================== */}
+        {/* VIEW: DELIVERY ZONE GEOFENCE POLYGON MANAGER                          */}
+        {/* ===================================================================== */}
+        {activeTab === 'delivery-zone' && (
+          <main className="p-8">
+            <DeliveryZoneManager />
           </main>
         )}
 

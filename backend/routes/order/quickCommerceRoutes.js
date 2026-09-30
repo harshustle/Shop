@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const QCRedis = require('../../services/cache/quickCommerceRedis');
+const DeliveryZone = require('../../models/order/DeliveryZone');
+const turf = require('@turf/turf');
 
 // ============================================================================
 // DOMAIN 1: CHECKOUT & FLASH SALES
@@ -291,17 +293,167 @@ router.post('/logistics/gps', async (req, res) => {
 });
 
 // Dark Store Hub Information & Turf GeoJSON Perimeter
-router.get('/store-hub', (req, res) => {
-    res.json({
-        success: true,
-        hub: QCRedis.getStoreHubInfo()
-    });
+router.get('/store-hub', async (req, res) => {
+    try {
+        let activeZone = await DeliveryZone.findOne({ isActive: true }).sort({ updatedAt: -1 });
+        if (activeZone) {
+            QCRedis.setActiveDeliveryZone(activeZone);
+        }
+        res.json({
+            success: true,
+            hub: QCRedis.getStoreHubInfo()
+        });
+    } catch (e) {
+        res.json({
+            success: true,
+            hub: QCRedis.getStoreHubInfo()
+        });
+    }
+});
+
+// GET Active Delivery Zone & Polygon
+router.get('/delivery-zone', async (req, res) => {
+    try {
+        let zone = await DeliveryZone.findOne({ isActive: true }).sort({ updatedAt: -1 });
+        if (!zone) {
+            // Seed a default polygon for Tamkuhi Raj (center [84.2868, 26.6924], radius 5km)
+            const defaultCenter = { lat: 26.6924, lng: 84.2868 };
+            const defaultCircle = turf.circle([defaultCenter.lng, defaultCenter.lat], 5, {
+                steps: 32,
+                units: 'kilometers'
+            });
+            zone = await DeliveryZone.create({
+                name: 'Tamkuhi Raj & Surrounding Express Zone',
+                hubName: 'FreshCart Tamkuhi Raj Hub',
+                hubAddress: 'NH28, Tamkuhi Raj, Kushinagar, UP - 274407',
+                center: defaultCenter,
+                polygon: defaultCircle.geometry,
+                areaSqKm: parseFloat((turf.area(defaultCircle) / 1000000).toFixed(2)),
+                radiusKm: 5,
+                isActive: true,
+                estimatedDeliveryMinutes: 12
+            });
+        }
+        QCRedis.setActiveDeliveryZone(zone);
+        res.json({ success: true, zone });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// POST Create or Update Active Delivery Zone with Custom Polygon
+router.post('/delivery-zone', async (req, res) => {
+    try {
+        const {
+            name = 'Custom Delivery Zone',
+            hubName = 'FreshCart Hub',
+            hubAddress = 'Store Address',
+            center,
+            polygon,
+            radiusKm = 5,
+            isActive = true,
+            estimatedDeliveryMinutes = 15
+        } = req.body;
+
+        if (!polygon || !polygon.coordinates || !Array.isArray(polygon.coordinates) || polygon.coordinates.length === 0) {
+            return res.status(400).json({ success: false, error: 'A valid GeoJSON Polygon with coordinates is required' });
+        }
+
+        const ring = polygon.coordinates[0];
+        if (!Array.isArray(ring) || ring.length < 4) {
+            return res.status(400).json({ success: false, error: 'Polygon must have at least 3 distinct vertices and be closed (min 4 points)' });
+        }
+
+        // Calculate polygon area in sq km
+        let areaSqKm = 0;
+        try {
+            const turfPoly = turf.polygon(polygon.coordinates);
+            areaSqKm = parseFloat((turf.area(turfPoly) / 1000000).toFixed(2));
+        } catch (e) {
+            console.error('Error calculating area:', e.message);
+        }
+
+        // Calculate center centroid if not provided
+        let calcCenter = center;
+        if (!calcCenter || !calcCenter.lat || !calcCenter.lng) {
+            try {
+                const centroid = turf.centroid(turf.polygon(polygon.coordinates));
+                calcCenter = {
+                    lat: parseFloat(centroid.geometry.coordinates[1].toFixed(5)),
+                    lng: parseFloat(centroid.geometry.coordinates[0].toFixed(5))
+                };
+            } catch (e) {
+                calcCenter = { lat: 26.6924, lng: 84.2868 };
+            }
+        }
+
+        // Deactivate older active zones
+        if (isActive) {
+            await DeliveryZone.updateMany({}, { isActive: false });
+        }
+
+        const savedZone = await DeliveryZone.create({
+            name,
+            hubName,
+            hubAddress,
+            center: calcCenter,
+            polygon: {
+                type: 'Polygon',
+                coordinates: polygon.coordinates
+            },
+            areaSqKm,
+            radiusKm: Number(radiusKm) || 5,
+            isActive: Boolean(isActive),
+            estimatedDeliveryMinutes: Number(estimatedDeliveryMinutes) || 15
+        });
+
+        // Sync with Redis engine
+        QCRedis.setActiveDeliveryZone(savedZone);
+
+        res.json({
+            success: true,
+            message: 'Delivery polygon zone saved successfully',
+            zone: savedZone
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// DELETE Reset to Default
+router.delete('/delivery-zone/:id', async (req, res) => {
+    try {
+        await DeliveryZone.findByIdAndDelete(req.params.id);
+        const latest = await DeliveryZone.findOne({ isActive: true }).sort({ updatedAt: -1 });
+        QCRedis.setActiveDeliveryZone(latest);
+        res.json({ success: true, message: 'Zone deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // 32. Geofence Verification (Point-in-Polygon & Distance via Turf)
-router.post('/logistics/geofence', (req, res) => {
-    const { customerLat, customerLng, hubLat, hubLng, radiusKm, customPolygon } = req.body;
-    res.json(QCRedis.validateAddressGeofence(customerLat, customerLng, hubLat, hubLng, radiusKm, customPolygon));
+router.post('/logistics/geofence', async (req, res) => {
+    try {
+        let { customerLat, customerLng, hubLat, hubLng, radiusKm, customPolygon } = req.body;
+        
+        // If no customPolygon is explicitly provided, fetch the active DeliveryZone from DB
+        if (!customPolygon) {
+            const activeZone = await DeliveryZone.findOne({ isActive: true }).sort({ updatedAt: -1 });
+            if (activeZone && activeZone.polygon) {
+                customPolygon = activeZone.polygon;
+                if (!hubLat || !hubLng) {
+                    hubLat = activeZone.center.lat;
+                    hubLng = activeZone.center.lng;
+                }
+            }
+        }
+
+        res.json(QCRedis.validateAddressGeofence(customerLat, customerLng, hubLat, hubLng, radiusKm, customPolygon));
+    } catch (e) {
+        const { customerLat, customerLng, hubLat, hubLng, radiusKm, customPolygon } = req.body;
+        res.json(QCRedis.validateAddressGeofence(customerLat, customerLng, hubLat, hubLng, radiusKm, customPolygon));
+    }
 });
 
 // 33. Nearest Riders in 2km
