@@ -24,7 +24,7 @@ This guide details the complete deployment process for the FreshCart Single-Vend
                      ┌─────────────┐
                      │     EC2     │
                      │             │
-                     │  Next.js    │
+                     │  React/Vite │
                      │  Node.js API│
                      │  Nginx      │
                      │  PM2        │
@@ -96,7 +96,39 @@ This guide details the complete deployment process for the FreshCart Single-Vend
 
 ---
 
-## 6. PM2 & Nginx Deployment
+## 6. EC2 Deployment (Automated or Manual)
+
+### Method A: Automated One-Command Setup & Deployment (Recommended)
+
+1. **Initial Server Provisioning (Run once on fresh Ubuntu EC2)**:
+   ```bash
+   # Clone the repository
+   sudo git clone <repository_url> /var/www/freshcart
+   sudo chown -R $USER:$USER /var/www/freshcart
+   cd /var/www/freshcart
+
+   # Run automated provisioner (installs Node 20, PM2, Nginx, Redis, Certbot, UFW, Kernel tuning)
+   chmod +x deploy/ec2-setup.sh deploy/ec2-deploy.sh
+   ./deploy/ec2-setup.sh
+   ```
+
+2. **Configure Production Credentials**:
+   ```bash
+   cp backend/.env.example backend/.env
+   nano backend/.env   # Enter your MongoDB Atlas URI, JWT Secret, Razorpay keys, S3 keys
+   ```
+
+3. **Deploy & Start Cluster**:
+   ```bash
+   ./deploy/ec2-deploy.sh
+   ```
+
+*(Whenever you push code updates later, simply log into the EC2 and run `./deploy/ec2-deploy.sh` for zero-downtime reloads).*
+
+---
+
+### Method B: Manual Step-by-Step Commands
+
 ```bash
 # Clone repo
 git clone <repository_url> /var/www/freshcart
@@ -118,7 +150,7 @@ pm2 startup
 
 # Configure Nginx
 sudo cp ../deploy/nginx.conf /etc/nginx/sites-available/freshcart.conf
-sudo ln -s /etc/nginx/sites-available/freshcart.conf /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/freshcart.conf /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx

@@ -3,14 +3,14 @@ import { MessageSquare, Star, Send, X, CheckCircle2, AlertCircle } from 'lucide-
 import { API_URL } from '../../config';
 
 const FeedbackModal = ({ isOpen, onClose }) => {
-  if (!isOpen) return null;
-
   const [category, setCategory] = useState('Order Experience');
   const [rating, setRating] = useState(5);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errorText, setErrorText] = useState('');
+
+  if (!isOpen) return null;
 
   const categories = [
     'Order Experience',
