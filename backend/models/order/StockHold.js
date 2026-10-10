@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
 
 const stockHoldSchema = new mongoose.Schema({
+    holdToken: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true
+    },
     variantId: {
         type: String,
         required: true,

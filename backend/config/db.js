@@ -4,12 +4,12 @@ const fs = require('fs');
 
 let isConnected = false;
 
-// Production Mongoose Configuration (Tuned for 5,000 Concurrent Users)
+// Production Mongoose Configuration (Configurable per-worker connection pool)
 const mongooseOptions = {
     serverSelectionTimeoutMS: 8000,
     socketTimeoutMS: 45000,
-    maxPoolSize: 100, // 100 pooled connections per worker process
-    minPoolSize: 25,  // Pre-warmed hot connections to prevent cold-start latency
+    maxPoolSize: parseInt(process.env.MONGO_MAX_POOL_SIZE || '20', 10), // Default 20 per PM2 worker (e.g. 4 workers = max 80 conns)
+    minPoolSize: parseInt(process.env.MONGO_MIN_POOL_SIZE || '2', 10),  // Default 2 idle connections per worker
     maxIdleTimeMS: 30000,
     family: 4 // IPv4
 };
@@ -105,8 +105,10 @@ const connectDB = async () => {
         await mongoose.connect(uri, mongooseOptions);
         console.log('MongoDB Connected Successfully.');
 
-        // Run migrations
-        await runPendingMigrations();
+        // Run migrations only if explicitly enabled (prevent multi-worker race conditions in cluster mode)
+        if (process.env.AUTO_MIGRATE === 'true') {
+            await runPendingMigrations();
+        }
 
         return mongoose.connection;
     } catch (error) {

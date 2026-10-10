@@ -172,114 +172,144 @@ class RedisService {
      * @param {number} requestedQty
      * @param {number} physicalStock
      * @param {number} ttlSeconds Default: 900 (15 minutes)
-     * @returns {Promise<{ success: boolean, available: number, reserved: number }>}
+    /**
+     * Tokenized Atomic Inventory Reservation
+     * Acquires hold with a unique ownership token and discrete TTL
+     * 
+     * @param {string} sku 
+     * @param {number} requestedQty
+     * @param {number} physicalStock
+     * @param {number} ttlSeconds Default: 900 (15 minutes)
+     * @param {string} holdToken Unique ownership token
+     * @returns {Promise<{ success: boolean, available: number, reserved: number, holdToken: string }>}
      */
-    async reserveStock(sku, requestedQty, physicalStock, ttlSeconds = 900) {
+    async reserveStock(sku, requestedQty, physicalStock, ttlSeconds = 900, holdToken = null) {
+        const token = holdToken || require('crypto').randomUUID();
         const stockKey = `stock:sku:${sku}`;
         const reserveKey = `reserve:sku:${sku}`;
+        const holdTokenKey = `hold:sku:${sku}:${token}`;
 
         if (this.isConnected && this.client) {
             try {
-                // Ensure physical stock key is seeded in Redis
                 await this.client.set(stockKey, physicalStock, 'NX');
 
-                // Production Lua Script from Section 5.1
+                // Atomic check, global reserve counter increment, and individual hold key creation with isolated TTL
                 const luaScript = `
                     local stock = tonumber(redis.call('get', KEYS[1]) or ARGV[2])
                     local reserved = tonumber(redis.call('get', KEYS[2]) or '0')
                     local requested = tonumber(ARGV[1])
 
                     if (stock - reserved) >= requested then
-                        local newReserved = redis.call('incrby', KEYS[2], requested)
-                        redis.call('expire', KEYS[2], tonumber(ARGV[3]))
+                        redis.call('incrby', KEYS[2], requested)
+                        redis.call('set', KEYS[3], requested, 'EX', tonumber(ARGV[3]))
+                        local newReserved = reserved + requested
                         return {1, stock - newReserved, newReserved}
                     else
                         return {0, stock - reserved, reserved}
                     end
                 `;
 
-                const result = await this.client.eval(luaScript, 2, stockKey, reserveKey, requestedQty, physicalStock, ttlSeconds);
+                const result = await this.client.eval(luaScript, 3, stockKey, reserveKey, holdTokenKey, requestedQty, physicalStock, ttlSeconds);
                 return {
                     success: result[0] === 1,
                     available: Number(result[1]),
-                    reserved: Number(result[2])
+                    reserved: Number(result[2]),
+                    holdToken: token
                 };
             } catch (err) {
-                console.warn(`[RedisService] Lua reservation error for SKU ${sku}: ${err.message}. Falling back to memory lock.`);
+                console.warn(`[RedisService] Lua reservation error for SKU ${sku}: ${err.message}. Falling back to tokenized memory lock.`);
             }
         }
 
-        // In-memory atomic reservation simulation
-        if (!this.inMemoryReservations) {
-            this.inMemoryReservations = new Map();
+        // Tokenized in-memory atomic reservation
+        if (!this.inMemoryHoldTokens) {
+            this.inMemoryHoldTokens = new Map(); // token -> { sku, quantity, expiresAt }
         }
 
         const now = Date.now();
-        const existing = this.inMemoryReservations.get(sku);
+        // Calculate active reserved for this SKU across valid tokens
         let activeReserved = 0;
-
-        if (existing) {
-            if (now <= existing.expiresAt) {
-                activeReserved = existing.quantity;
-            } else {
-                this.inMemoryReservations.delete(sku);
+        for (const [t, data] of this.inMemoryHoldTokens.entries()) {
+            if (data.sku === sku) {
+                if (now <= data.expiresAt) {
+                    activeReserved += data.quantity;
+                } else {
+                    this.inMemoryHoldTokens.delete(t);
+                }
             }
         }
 
         const available = Math.max(0, physicalStock - activeReserved);
         if (available >= requestedQty) {
             const newReserved = activeReserved + requestedQty;
-            this.inMemoryReservations.set(sku, {
-                quantity: newReserved,
+            this.inMemoryHoldTokens.set(token, {
+                sku,
+                quantity: requestedQty,
                 expiresAt: now + ttlSeconds * 1000
             });
             return {
                 success: true,
                 available: physicalStock - newReserved,
-                reserved: newReserved
+                reserved: newReserved,
+                holdToken: token
             };
         } else {
             return {
                 success: false,
                 available,
-                reserved: activeReserved
+                reserved: activeReserved,
+                holdToken: null
             };
         }
     }
 
     /**
-     * Releases or reduces reserved stock (e.g. on cart abandon or checkout timeout)
+     * Safe Atomic Release: Only releases stock if holdToken matches and is active
+     * Prevents checkout A from accidentally releasing checkout B's reservation
      */
-    async releaseStock(sku, quantity) {
+    async releaseStock(sku, quantity, holdToken = null) {
         const reserveKey = `reserve:sku:${sku}`;
+        const holdTokenKey = holdToken ? `hold:sku:${sku}:${holdToken}` : null;
+
         if (this.isConnected && this.client) {
             try {
-                const current = await this.client.get(reserveKey);
-                if (current) {
-                    const newRes = Math.max(0, parseInt(current, 10) - quantity);
-                    await this.client.set(reserveKey, newRes);
+                if (holdTokenKey) {
+                    // Safe release checking ownership token
+                    const luaScript = `
+                        local holdQty = tonumber(redis.call('get', KEYS[2]) or '0')
+                        if holdQty > 0 then
+                            redis.call('del', KEYS[2])
+                            local currentReserved = tonumber(redis.call('get', KEYS[1]) or '0')
+                            local newReserved = math.max(0, currentReserved - holdQty)
+                            redis.call('set', KEYS[1], newReserved)
+                            return {1, newReserved}
+                        else
+                            return {0, tonumber(redis.call('get', KEYS[1]) or '0')}
+                        end
+                    `;
+                    await this.client.eval(luaScript, 2, reserveKey, holdTokenKey);
+                } else {
+                    const current = await this.client.get(reserveKey);
+                    if (current) {
+                        const newRes = Math.max(0, parseInt(current, 10) - quantity);
+                        await this.client.set(reserveKey, newRes);
+                    }
                 }
             } catch (err) {
                 console.warn(`[RedisService] releaseStock error:`, err.message);
             }
         }
 
-        if (this.inMemoryReservations && this.inMemoryReservations.has(sku)) {
-            const cur = this.inMemoryReservations.get(sku);
-            const newQty = Math.max(0, cur.quantity - quantity);
-            if (newQty === 0) {
-                this.inMemoryReservations.delete(sku);
-            } else {
-                cur.quantity = newQty;
-            }
+        if (this.inMemoryHoldTokens && holdToken && this.inMemoryHoldTokens.has(holdToken)) {
+            this.inMemoryHoldTokens.delete(holdToken);
         }
     }
 
     /**
      * Commits reservation upon successful payment
      */
-    async commitStock(sku, quantity, newPhysicalStock) {
-        await this.releaseStock(sku, quantity);
+    async commitStock(sku, quantity, newPhysicalStock, holdToken = null) {
+        await this.releaseStock(sku, quantity, holdToken);
         if (this.isConnected && this.client) {
             try {
                 await this.client.set(`stock:sku:${sku}`, newPhysicalStock);

@@ -127,8 +127,7 @@ const GoogleAuthButton = ({ onError, label = "Continue with Google" }) => {
       return;
     }
 
-    // If no client ID configured yet, authenticate using demo mode with helpful toast
-    handleGoogleCredential('demo-google-token');
+    if (onError) onError('Google Auth is not configured. Please contact support.');
   };
 
   return (
@@ -173,11 +172,7 @@ const GoogleAuthButton = ({ onError, label = "Continue with Google" }) => {
         )}
       </button>
 
-      {!googleClientId && (
-        <p className="text-[10px] text-center text-slate-400 mt-1.5">
-          (Ready: Add <span className="font-mono text-slate-500">VITE_GOOGLE_CLIENT_ID</span> to <span className="font-mono text-slate-500">client/.env</span> for live OAuth)
-        </p>
-      )}
+
     </div>
   );
 };

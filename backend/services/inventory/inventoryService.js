@@ -2,12 +2,31 @@ const Product = require('../../models/catalog/Product');
 const StockHold = require('../../models/order/StockHold');
 const redisService = require('../cache/redisService');
 
+const { v4: uuidv4 } = require('uuid');
+
 class InventoryService {
     /**
-     * Cleans up expired stock holds (MongoDB TTL index does this automatically, but manual cleanup ensures immediate consistency)
+     * Cleans up expired stock holds and safely reverses allocated stock
      */
     static async cleanupExpiredHolds() {
-        await StockHold.deleteMany({ expiresAt: { $lte: new Date() } });
+        try {
+            const expired = await StockHold.find({ expiresAt: { $lte: new Date() } });
+            for (const h of expired) {
+                const found = await this.findVariant(h.variantId);
+                if (found && found.variant) {
+                    await Product.updateOne(
+                        { _id: found.product._id, "variants._id": found.variant._id },
+                        { $inc: { "variants.$.stockAllocated": -h.quantity } }
+                    );
+                    await redisService.releaseStock(found.variant.sku, h.quantity, h.holdToken);
+                }
+            }
+            if (expired.length > 0) {
+                await StockHold.deleteMany({ expiresAt: { $lte: new Date() } });
+            }
+        } catch (err) {
+            console.warn('[InventoryService] Error cleaning up expired holds:', err.message);
+        }
     }
 
     /**
@@ -50,9 +69,9 @@ class InventoryService {
 
     /**
      * Section 5.1 & 7.3: High-Concurrency Distributed Inventory Hold
-     * 15-minute hold on inventory via Redis Lua atomic lock + MongoDB StockHold fallback
+     * 15-minute hold on inventory via Tokenized Redis Lua atomic lock + MongoDB StockHold
      */
-    static async acquireStockHold(variantIdOrSku, requestedQty, sessionOrUserId, durationMinutes = 15) {
+    static async acquireStockHold(variantIdOrSku, requestedQty, sessionOrUserId, durationMinutes = 15, customToken = null) {
         await this.cleanupExpiredHolds();
         const found = await this.findVariant(variantIdOrSku);
         if (!found || !found.variant) {
@@ -61,9 +80,10 @@ class InventoryService {
 
         const physical = found.variant.stockOnHand ?? found.variant.stockQuantity ?? 0;
         const sku = found.variant.sku;
+        const holdToken = customToken || `hold_${uuidv4()}`;
 
-        // 1. High-concurrency Redis Lua atomic check & reserve
-        const redisLock = await redisService.reserveStock(sku, requestedQty, physical, durationMinutes * 60);
+        // 1. High-concurrency Redis Lua atomic check & reserve with unique holdToken
+        const redisLock = await redisService.reserveStock(sku, requestedQty, physical, durationMinutes * 60, holdToken);
         if (!redisLock.success) {
             return {
                 success: false,
@@ -72,9 +92,10 @@ class InventoryService {
             };
         }
 
-        // 2. Persist MongoDB StockHold record for durability across restarts
+        // 2. Persist MongoDB StockHold record with ownership token for durability across restarts
         const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000);
         const hold = await StockHold.create({
+            holdToken,
             variantId: found.variant._id.toString(),
             sessionOrUserId,
             quantity: requestedQty,
@@ -90,6 +111,7 @@ class InventoryService {
         return {
             success: true,
             holdId: hold._id,
+            holdToken,
             expiresAt: hold.expiresAt,
             quantity: requestedQty,
             sku,
@@ -98,20 +120,31 @@ class InventoryService {
     }
 
     /**
-     * Releases hold by ID
+     * Releases hold by ID or holdToken with ownership validation
      */
-    static async releaseHold(holdId) {
-        const hold = await StockHold.findById(holdId);
+    static async releaseHold(holdIdOrToken) {
+        let hold = null;
+        try {
+            hold = await StockHold.findOne({
+                $or: [
+                    { holdToken: holdIdOrToken },
+                    { _id: holdIdOrToken }
+                ]
+            });
+        } catch (e) {
+            hold = await StockHold.findOne({ holdToken: holdIdOrToken });
+        }
+
         if (hold) {
             const found = await this.findVariant(hold.variantId);
             if (found && found.variant) {
-                await redisService.releaseStock(found.variant.sku, hold.quantity);
+                await redisService.releaseStock(found.variant.sku, hold.quantity, hold.holdToken);
                 await Product.updateOne(
                     { _id: found.product._id, "variants._id": found.variant._id },
                     { $inc: { "variants.$.stockAllocated": -hold.quantity } }
                 );
             }
-            await StockHold.findByIdAndDelete(holdId);
+            await StockHold.deleteOne({ _id: hold._id });
         }
     }
 
@@ -121,18 +154,23 @@ class InventoryService {
     static async releaseSessionHolds(sessionOrUserId) {
         const holds = await StockHold.find({ sessionOrUserId });
         for (const hold of holds) {
-            await this.releaseHold(hold._id);
+            await this.releaseHold(hold.holdToken || hold._id);
         }
     }
 
     /**
      * Section 5.1 & 7.3: Production Atomic Stock Decrement
-     * Decrements physical stock in MongoDB and commits Redis reservation
+     * Decrements physical stock in MongoDB (with transaction support) and commits Redis reservation
      */
-    static async atomicStockDecrement(variantIdOrSku, quantity) {
+    static async atomicStockDecrement(variantIdOrSku, quantity, session = null, holdToken = null) {
         const found = await this.findVariant(variantIdOrSku);
         if (!found || !found.variant) {
             throw new Error(`Variant not found: ${variantIdOrSku}`);
+        }
+
+        const queryOptions = { new: true };
+        if (session) {
+            queryOptions.session = session;
         }
 
         const updatedProduct = await Product.findOneAndUpdate(
@@ -148,7 +186,7 @@ class InventoryService {
                     "variants.$.stockAllocated": -quantity
                 }
             },
-            { new: true }
+            queryOptions
         );
 
         if (!updatedProduct) {
@@ -159,7 +197,7 @@ class InventoryService {
         const remainingPhysical = updatedVariant ? updatedVariant.stockQuantity : 0;
 
         // Commit in Redis
-        await redisService.commitStock(found.variant.sku, quantity, remainingPhysical);
+        await redisService.commitStock(found.variant.sku, quantity, remainingPhysical, holdToken);
 
         return true;
     }

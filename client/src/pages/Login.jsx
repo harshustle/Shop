@@ -726,25 +726,7 @@ const Login = () => {
         {isOtpStep && (
           <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
             
-            {/* Developer Mode OTP Preview Banner (When gateway falls back to local simulation) */}
-            {devOtp && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-center">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800">
-                  <ShieldCheck size={14} className="text-[#00B074]" />
-                  <span>Verification Code (Demo & Local Mode)</span>
-                </div>
-                <div className="text-2xl font-mono font-black text-[#00B074] tracking-widest my-1">
-                  {devOtp}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtpCode(devOtp)}
-                  className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200 px-3 py-1 rounded-lg transition"
-                >
-                  Click to Auto-fill Code
-                </button>
-              </div>
-            )}
+
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
@@ -954,19 +936,7 @@ const Login = () => {
             {/* STEP 2: Enter Code & New Password */}
             {resetStep === 2 && (
               <form onSubmit={handleVerifyResetOtp} className="space-y-4 mt-4">
-                {resetGeneratedOtp && (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl text-center">
-                    <p className="text-[11px] font-bold text-emerald-800">Verification OTP Code:</p>
-                    <p className="text-2xl font-mono font-black text-[#00B074] tracking-widest mt-0.5">{resetGeneratedOtp}</p>
-                    <button
-                      type="button"
-                      onClick={() => setResetOtpCode(resetGeneratedOtp)}
-                      className="text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-2.5 py-0.5 rounded-md mt-1 transition"
-                    >
-                      Click to Auto-fill
-                    </button>
-                  </div>
-                )}
+
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Enter 6-Digit OTP *</label>

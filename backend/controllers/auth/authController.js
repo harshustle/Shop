@@ -37,31 +37,7 @@ const login = async (req, res) => {
             }
         }
 
-        // 1. Direct Hardcoded SuperAdmin Check (preserves instant dev/demo access)
-        if (targetPhone === '9161955178' && password === 'admin') {
-            let adminUser = await User.findOne({ phone: '9161955178' });
-            if (!adminUser) {
-                adminUser = await User.create({
-                    phone: '9161955178',
-                    email: 'admin@shop.local',
-                    fullName: 'Super Admin',
-                    password: 'admin',
-                    role: 'admin'
-                });
-            }
-            adminUser.lastLoginAt = new Date();
-            await adminUser.save();
 
-            const tokenPair = TokenService.generateTokenPair(adminUser);
-            return res.json({
-                message: 'SuperAdmin authenticated successfully',
-                token: tokenPair.token,
-                accessToken: tokenPair.accessToken,
-                refreshToken: tokenPair.refreshToken,
-                role: 'admin',
-                user: adminUser.toSafeJSON()
-            });
-        }
 
         // 2. Query User in MongoDB
         let query = null;
@@ -570,26 +546,16 @@ const googleAuth = async (req, res) => {
 
         let googleUser = null;
 
-        // Support demo/development token fallback if needed
-        if (credential === 'demo-google-token' && process.env.NODE_ENV !== 'production') {
-            googleUser = {
-                sub: 'demo-google-id-12345',
-                email: 'google.demo@example.com',
-                name: 'Google Demo User',
-                picture: null
-            };
-        } else {
-            // Verify token with Google tokeninfo endpoint
-            try {
-                const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
-                googleUser = response.data;
-            } catch (verifyErr) {
-                console.error('Google token validation error:', verifyErr.response?.data || verifyErr.message);
-                return res.status(401).json({ 
-                    error: 'Invalid or expired Google authentication token',
-                    details: verifyErr.response?.data?.error_description || verifyErr.message 
-                });
-            }
+        // Verify token with Google tokeninfo endpoint
+        try {
+            const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(credential)}`);
+            googleUser = response.data;
+        } catch (verifyErr) {
+            console.error('Google token validation error:', verifyErr.response?.data || verifyErr.message);
+            return res.status(401).json({ 
+                error: 'Invalid or expired Google authentication token',
+                details: verifyErr.response?.data?.error_description || verifyErr.message 
+            });
         }
 
         const { sub: googleId, email, name, picture } = googleUser;

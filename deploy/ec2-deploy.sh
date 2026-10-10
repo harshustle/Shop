@@ -39,7 +39,11 @@ echo "--> Installing backend dependencies..."
 cd $APP_DIR/backend
 npm ci --only=production || npm install --production
 
-# 5. Ensure uploads directory exists
+# 5. Run Database Migrations (Controlled single-instance step before starting PM2)
+echo "--> Running Database Migrations..."
+npm run migrate
+
+# 6. Ensure uploads directory exists
 mkdir -p $APP_DIR/backend/uploads
 
 # 6. Configure & Reload Nginx

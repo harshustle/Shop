@@ -412,7 +412,7 @@ const createCheckoutOrder = async (req, res) => {
             ? shipping_address
             : (shipping_address?.address || JSON.stringify(shipping_address || {}));
 
-        const isPaidOnline = payment_method.toLowerCase() === 'paid_mock';
+        const isPaidOnline = false;
 
         const order = await Order.create({
             orderNumber,
@@ -473,7 +473,7 @@ const processCheckoutPayment = async (req, res) => {
     try {
         const {
             order_id,
-            payment_gateway = 'mock',
+            payment_gateway = 'razorpay',
             idempotency_key = req.headers['idempotency-key'] || `idemp_${uuidv4()}`,
             currency = 'INR'
         } = req.body;

@@ -9,7 +9,7 @@ const paymentSchema = new mongoose.Schema({
     paymentGateway: {
         type: String,
         required: true,
-        enum: ['stripe', 'razorpay', 'mock', 'cod']
+        enum: ['stripe', 'razorpay', 'cod']
     },
     gatewayTransactionId: {
         type: String,

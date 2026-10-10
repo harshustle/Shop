@@ -501,25 +501,7 @@ const Register = () => {
         {/* STEP 2: VERIFY OTP CODE */}
         {isOtpStep && (
           <form onSubmit={handleVerifyOtpAndRegister} className="space-y-4">
-            {/* Developer Mode OTP Preview Banner */}
-            {devOtp && (
-              <div className="p-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-center">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800">
-                  <ShieldCheck size={14} className="text-[#00B074]" />
-                  <span>Verification Code (Demo & Local Mode)</span>
-                </div>
-                <div className="text-2xl font-mono font-black text-[#00B074] tracking-widest my-1">
-                  {devOtp}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setOtpCode(devOtp)}
-                  className="text-[11px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 px-3 py-1 rounded-lg transition"
-                >
-                  Click to Auto-fill Code
-                </button>
-              </div>
-            )}
+
 
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
