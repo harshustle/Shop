@@ -183,12 +183,12 @@ const CustomerAccount = () => {
                 setShowMobileContent(false);
                 setSearchParams({});
               }}
-              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-[#00B074] transition"
+              className="flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-[#635BFF] transition"
             >
               <ArrowLeft size={16} />
               <span>Back to Account Menu</span>
             </button>
-            <span className="text-xs font-black uppercase text-slate-400 tracking-wider">
+            <span className="text-xs font-black uppercase text-[#635BFF] tracking-wider">
               {activeTab}
             </span>
           </div>

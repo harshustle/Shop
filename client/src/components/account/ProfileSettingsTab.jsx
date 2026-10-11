@@ -87,7 +87,7 @@ const ProfileSettingsTab = ({ profileForm, setProfileForm, onProfileSaved }) => 
             value={profileForm.fullName}
             onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
             placeholder="Your Name"
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
           />
         </div>
 
@@ -98,14 +98,14 @@ const ProfileSettingsTab = ({ profileForm, setProfileForm, onProfileSaved }) => 
             value={profileForm.email}
             onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
             placeholder="you@example.com"
-            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
           />
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="block text-xs font-bold text-slate-700">Registered Mobile Number</label>
-            <span className="text-[10px] text-[#00B074] font-bold flex items-center gap-1">
+            <span className="text-[10px] text-[#635BFF] font-bold flex items-center gap-1">
               <ShieldCheck size={12} />
               <span>OTP Verified</span>
             </span>
@@ -125,7 +125,7 @@ const ProfileSettingsTab = ({ profileForm, setProfileForm, onProfileSaved }) => 
           <button
             type="submit"
             disabled={isSaving}
-            className="px-6 py-2.5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl text-xs font-black transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+            className="px-6 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-black transition flex items-center gap-2 shadow-md shadow-[#635BFF]/25 disabled:opacity-50"
           >
             <Save size={14} />
             <span>{isSaving ? 'Saving Changes...' : 'Save Changes'}</span>

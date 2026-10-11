@@ -9,6 +9,13 @@ import {
   QrCode, 
   Truck,
   ArrowRight,
+  ArrowLeft,
+  Repeat,
+  Package,
+  ShoppingBag,
+  ChevronDown,
+  Check,
+  MapPin,
   Clock,
   ShieldCheck,
   AlertCircle
@@ -328,21 +335,13 @@ const CheckoutModal = ({ isOpen, onClose }) => {
         className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
       />
 
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 z-10 animate-in zoom-in-95 duration-200">
+      <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
+        <div className="relative w-full max-w-md bg-[#FBFBFE] rounded-[32px] shadow-2xl border border-slate-100 p-5 sm:p-6 z-10 animate-in zoom-in-95 duration-200">
           
-          {/* Close button */}
-          <button
-            onClick={handleClose}
-            className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition"
-          >
-            <X size={20} />
-          </button>
-
           {/* SUCCESS SCREEN */}
           {orderSuccess ? (
             <div className="text-center py-6 space-y-4">
-              <div className="w-16 h-16 rounded-full bg-[#E8F8F0] text-[#00B074] flex items-center justify-center mx-auto text-2xl shadow-md shadow-[#00B074]/20 animate-bounce">
+              <div className="w-16 h-16 rounded-full bg-[#EFEBFF] text-[#635BFF] flex items-center justify-center mx-auto text-2xl shadow-lg shadow-[#635BFF]/20 animate-bounce">
                 <CheckCircle2 size={36} />
               </div>
               
@@ -352,13 +351,13 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                   Order Number: <strong className="text-slate-900 font-mono">{orderSuccess.orderNumber || '#FC-' + Date.now().toString().slice(-6)}</strong>
                 </p>
                 {orderSuccess.shippingLogistics?.awbCode && (
-                  <p className="text-[11px] font-mono text-[#00B074] font-bold mt-0.5">
+                  <p className="text-[11px] font-mono text-[#635BFF] font-bold mt-0.5">
                     AWB Tracking: {orderSuccess.shippingLogistics.awbCode}
                   </p>
                 )}
               </div>
 
-              <div className="p-4 bg-[#F8FDFB] border border-emerald-100 rounded-2xl text-xs space-y-1.5 text-slate-600 max-w-sm mx-auto text-left">
+              <div className="p-4 bg-white border border-slate-100 rounded-2xl text-xs space-y-2 text-slate-600 max-w-sm mx-auto text-left shadow-2xs">
                 <div className="flex justify-between font-bold">
                   <span>Amount Paid / Payable:</span>
                   <span className="text-slate-900 font-black">₹{grandTotal.toFixed(2)}</span>
@@ -369,7 +368,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                 </div>
                 <div className="flex justify-between">
                   <span>Delivery Fleet:</span>
-                  <span className="text-[#00B074] font-black">⚡ FreshCart Express (15 Mins)</span>
+                  <span className="text-[#635BFF] font-black">⚡ FreshCart Express (15 Mins)</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Delivering to:</span>
@@ -377,14 +376,14 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+              <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     handleClose();
                     navigate('/orders');
                   }}
-                  className="w-full sm:w-auto px-6 py-3 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl text-xs font-black transition shadow-sm"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-black transition shadow-lg shadow-[#635BFF]/30"
                 >
                   Track Order Live
                 </button>
@@ -394,226 +393,236 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                     handleClose();
                     navigate('/shop');
                   }}
-                  className="w-full sm:w-auto px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition"
+                  className="w-full sm:w-auto px-6 py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-full text-xs font-bold transition"
                 >
                   Continue Shopping
                 </button>
               </div>
             </div>
           ) : (
-            /* CHECKOUT FORM */
+            /* SCREEN 1 CHECKOUT FORM */
             <form onSubmit={handleSubmitOrder} className="space-y-4">
-              <div>
-                <span className="text-xs font-black text-[#00B074] uppercase tracking-wider">Fast Checkout</span>
-                <h3 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">
-                  Confirm Delivery & Payment
-                </h3>
+              
+              {/* Top Header: Circular Back Button & Title */}
+              <div className="flex items-center gap-3.5">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="w-10 h-10 rounded-full bg-white border border-slate-200/70 flex items-center justify-center text-slate-800 shadow-2xs hover:bg-slate-50 transition active:scale-95 shrink-0"
+                >
+                  <ArrowLeft size={18} strokeWidth={2.5} />
+                </button>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">Checkout</h1>
               </div>
 
               {error && (
-                <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-600 font-bold flex items-center gap-2">
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl text-xs text-rose-600 font-bold flex items-center gap-2">
                   <AlertCircle size={16} className="shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
-              {/* Saved addresses shortcut */}
-              {savedAddresses.length > 0 && (
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Select Saved Address:</label>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {savedAddresses.map((a) => (
-                      <button
-                        key={a._id}
-                        type="button"
-                        onClick={() => setFormData({
-                          ...formData,
-                          name: a.fullName,
-                          phone: a.phoneNumber,
-                          address: `${a.streetAddress}, ${a.city} - ${a.postalCode}`,
-                          pincode: a.postalCode || '201014',
-                          state: a.state || 'Uttar Pradesh',
-                          addressTag: a.label
-                        })}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border shrink-0 transition ${
-                          formData.address.includes(a.streetAddress)
-                            ? 'bg-[#E8F8F0] border-[#00B074] text-[#00B074]'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
-                        }`}
-                      >
-                        {a.label} ({a.city})
-                      </button>
-                    ))}
+              {/* Product Items List (Matching Screen 1 Cards) */}
+              <div className="space-y-2.5 max-h-52 overflow-y-auto pr-1">
+                {items && items.length > 0 ? (
+                  items.map((item, idx) => (
+                    <div 
+                      key={item.id || item._id || idx}
+                      className="bg-white rounded-2xl p-3 border border-slate-100 shadow-2xs flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {/* Soft pastel product thumbnail container */}
+                        <div className="w-14 h-14 bg-[#F4F4F8] rounded-xl flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                          <img
+                            src={item.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200'}
+                            alt={item.name}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200';
+                            }}
+                          />
+                        </div>
+
+                        {/* Title, attributes, price */}
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-black text-slate-900 truncate">{item.name}</h4>
+                          <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400 font-medium">
+                            <span className="flex items-center gap-1">
+                              Color: <span className="w-2.5 h-2.5 rounded-full bg-[#635BFF] inline-block"></span>
+                            </span>
+                            <span>•</span>
+                            <span>Size: {item.unit || item.size || 'Standard'}</span>
+                          </div>
+                          <p className="text-xs font-black text-slate-900 mt-1">
+                            ₹{item.price} <span className="text-[10px] text-slate-400 font-normal">× {item.quantity}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Dropdown / Quantity badge */}
+                      <div className="w-8 h-8 rounded-full bg-[#F6F7FB] flex items-center justify-center text-slate-600 shrink-0">
+                        <ChevronDown size={14} />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs text-slate-400 bg-white rounded-2xl border border-dashed border-slate-200">
+                    Your bag is empty
                   </div>
+                )}
+              </div>
+
+              {/* Delivery Row & Address Pill */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800 px-1">
+                  <span>Delivery</span>
+                  <span className="text-slate-900 font-black">₹{deliveryFee || 15}</span>
+                </div>
+
+                {/* Delivery Pill Card matching Screenshot */}
+                <div className="bg-[#F4F4F8] p-3 rounded-2xl flex items-center justify-between text-xs font-medium text-slate-800">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <Truck size={16} className="text-slate-800 shrink-0" />
+                    <span className="truncate text-xs font-bold">
+                      Order: {formData.address || 'Street Golden 23/21, 7760'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openLocationModal && openLocationModal()}
+                    title="Change location"
+                    className="p-1.5 hover:bg-white rounded-lg text-slate-600 transition shrink-0"
+                  >
+                    <Repeat size={14} className="hover:rotate-180 transition duration-300" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Saved addresses shortcut if user has multiple */}
+              {savedAddresses.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5">
+                  {savedAddresses.map((a) => (
+                    <button
+                      key={a._id}
+                      type="button"
+                      onClick={() => setFormData({
+                        ...formData,
+                        name: a.fullName,
+                        phone: a.phoneNumber,
+                        address: `${a.streetAddress}, ${a.city} - ${a.postalCode}`,
+                        pincode: a.postalCode || '201014',
+                        state: a.state || 'Uttar Pradesh',
+                        addressTag: a.label
+                      })}
+                      className={`px-3 py-1 rounded-full text-[11px] font-bold border shrink-0 transition ${
+                        formData.address.includes(a.streetAddress)
+                          ? 'bg-[#EFEBFF] border-[#635BFF] text-[#635BFF]'
+                          : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300'
+                      }`}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {/* Customer Details */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Your Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Rahul Sharma"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Mobile Phone *</label>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="10-digit phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
-                  />
+              {/* Payment Card (VISA style matching Screen 1) */}
+              <div className="space-y-2 pt-1">
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, paymentMethod: 'razorpay' })}
+                    className={`p-3 rounded-2xl border transition flex items-center justify-between ${
+                      formData.paymentMethod === 'razorpay'
+                        ? 'bg-white border-slate-200 shadow-2xs text-slate-900 ring-2 ring-[#635BFF]/30'
+                        : 'bg-[#F4F4F8] border-transparent text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-black italic tracking-wider text-base text-[#1A1F71]">VISA</span>
+                      <span className="text-[10px] font-bold text-slate-400">/ UPI</span>
+                    </div>
+                    <span className="font-black text-xs text-slate-900">₹{grandTotal.toFixed(0)}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormData({ ...formData, paymentMethod: 'cod' })}
+                    className={`p-3 rounded-2xl border transition flex items-center justify-between ${
+                      formData.paymentMethod === 'cod'
+                        ? 'bg-white border-slate-200 shadow-2xs text-slate-900 ring-2 ring-[#635BFF]/30'
+                        : 'bg-[#F4F4F8] border-transparent text-slate-400'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Banknote size={16} className="text-amber-600 shrink-0" />
+                      <span className="font-bold text-[11px]">Cash</span>
+                    </div>
+                    <span className="font-black text-xs text-slate-900">₹{grandTotal.toFixed(0)}</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Turf Geofence Verification Status Card */}
-              <div className={`p-3 rounded-2xl border text-xs flex items-center justify-between gap-3 ${
-                selectedLocation?.isDeliverable !== false 
-                  ? 'bg-emerald-50/70 border-emerald-200/80 text-emerald-900' 
-                  : 'bg-rose-50 border-rose-200 text-rose-900'
-              }`}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${
-                    selectedLocation?.isDeliverable !== false ? 'bg-[#00B074] text-white' : 'bg-rose-500 text-white'
-                  }`}>
-                    <MapPin size={15} />
-                  </div>
-                  <div className="truncate">
-                    <p className="font-extrabold text-[11px] leading-tight">
-                      {selectedLocation?.isDeliverable !== false 
-                        ? `⚡ 5km Geofence Verified (${selectedLocation?.distanceKm || 0.5} km from Hub)` 
-                        : `⚠️ Outside 5km Delivery Zone (${selectedLocation?.distanceKm} km away)`}
-                    </p>
-                    <p className="text-[10px] text-slate-500 truncate mt-0.5">
-                      {selectedLocation?.isDeliverable !== false 
-                        ? '10-15 Min Express Dispatch Active' 
-                        : 'Please pick an address within the 5km dark store perimeter'}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => openLocationModal && openLocationModal()}
-                  className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-[10px] font-extrabold text-slate-800 transition shrink-0 shadow-2xs"
-                >
-                  Change on Map
-                </button>
-              </div>
-
-              {/* Delivery Address & Pincode */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Delivery Address *</label>
-                <textarea
-                  rows="2"
+              {/* Contact Details (Clean compact inputs) */}
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <input
+                  type="text"
                   required
-                  placeholder="House/Flat number, building name, landmark, city"
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                  placeholder="Your Name *"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#F4F4F8] border-0 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#635BFF] focus:outline-none"
+                />
+                <input
+                  type="tel"
+                  required
+                  placeholder="10-digit phone *"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#F4F4F8] border-0 rounded-xl text-xs font-semibold text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-[#635BFF] focus:outline-none"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Pincode *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="6-digit pincode"
-                    value={formData.pincode}
-                    onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">State *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="State (e.g. Maharashtra)"
-                    value={formData.state}
-                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Payment Method Choice */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">Select Payment Method:</label>
-                <div className="grid grid-cols-2 gap-3 text-xs font-bold">
-                  <div
-                    onClick={() => setFormData({ ...formData, paymentMethod: 'razorpay' })}
-                    className={`p-3 rounded-2xl border cursor-pointer transition flex items-center gap-2.5 ${
-                      formData.paymentMethod === 'razorpay'
-                        ? 'border-[#00B074] bg-[#E8F8F0] text-[#00B074]'
-                        : 'border-slate-200 bg-slate-50 text-slate-600'
-                    }`}
-                  >
-                    <CreditCard size={18} className="shrink-0 text-[#00B074]" />
-                    <div>
-                      <span className="block font-black leading-tight">Online (UPI / Cards)</span>
-                      <span className="text-[10px] opacity-75 font-normal">Razorpay Secure</span>
-                    </div>
+              {/* Price Breakdown with Bag & Package icons (Matching Screen 1) */}
+              <div className="space-y-1.5 pt-2 text-xs font-bold text-slate-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <ShoppingBag size={14} className="text-slate-400" />
+                    <span>Subtotal:</span>
                   </div>
+                  <span className="text-slate-900 font-black">₹{itemTotal.toFixed(2)}</span>
+                </div>
 
-                  <div
-                    onClick={() => setFormData({ ...formData, paymentMethod: 'cod' })}
-                    className={`p-3 rounded-2xl border cursor-pointer transition flex items-center gap-2.5 ${
-                      formData.paymentMethod === 'cod'
-                        ? 'border-[#00B074] bg-[#E8F8F0] text-[#00B074]'
-                        : 'border-slate-200 bg-slate-50 text-slate-600'
-                    }`}
-                  >
-                    <Banknote size={18} className="shrink-0 text-amber-600" />
-                    <div>
-                      <span className="block font-black leading-tight">Cash on Delivery</span>
-                      <span className="text-[10px] opacity-75 font-normal">Pay at Doorstep</span>
-                    </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <Package size={14} className="text-slate-400" />
+                    <span>Shipping:</span>
                   </div>
+                  <span className="text-slate-900 font-black">₹{(deliveryFee || 15).toFixed(2)}</span>
                 </div>
               </div>
 
-              {/* Order Amount Summary */}
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <div>
-                  <span className="text-slate-500 font-medium">Payable Amount:</span>
-                  <p className="text-xl font-black text-slate-900">₹{grandTotal.toFixed(2)}</p>
-                </div>
-                {appliedCoupon && (
-                  <span className="text-[10px] font-black text-[#00B074] bg-[#E8F8F0] px-2 py-0.5 rounded-md">
-                    Coupon: {appliedCoupon.code} (-₹{couponDiscount.toFixed(0)})
-                  </span>
-                )}
+              {/* Royal Purple Pill PAY CTA Button (Screen 1) */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full py-4 bg-[#635BFF] hover:bg-[#5248EE] active:scale-[0.99] text-white rounded-full font-black text-sm uppercase tracking-wide transition shadow-xl shadow-[#635BFF]/30 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Processing Payment...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard size={18} />
+                      <span>PAY</span>
+                    </>
+                  )}
+                </button>
               </div>
 
-              {/* Submit CTA */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl font-black text-xs transition shadow-lg shadow-[#00B074]/30 flex items-center justify-center gap-2 disabled:opacity-50"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Processing Payment...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Proceed to Pay ₹{grandTotal.toFixed(2)}</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
             </form>
           )}
 

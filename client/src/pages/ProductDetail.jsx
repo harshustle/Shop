@@ -16,7 +16,8 @@ import {
   ChevronRight,
   MessageSquarePlus,
   Send,
-  Loader2
+  Loader2,
+  ArrowLeft
 } from 'lucide-react';
 import FreshCartNavbar from '../components/FreshCartNavbar';
 import FreshCartFooter from '../components/FreshCartFooter';
@@ -151,7 +152,7 @@ const ProductDetail = () => {
         <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-10 h-10 border-4 border-[#00B074] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <div className="w-10 h-10 border-4 border-[#635BFF] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
             <p className="text-xs font-bold text-slate-500">Loading Product Specifications...</p>
           </div>
         </div>
@@ -169,7 +170,7 @@ const ProductDetail = () => {
             <p className="text-4xl mb-3">🛍️</p>
             <h3 className="text-base font-black text-slate-900">Product Not Found</h3>
             <p className="text-xs text-slate-500 mt-1 mb-4">The item you are searching for might be out of stock or discontinued.</p>
-            <Link to="/shop" className="px-5 py-2.5 bg-[#00B074] text-white rounded-2xl text-xs font-black">
+            <Link to="/shop" className="px-6 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-black shadow-md shadow-[#635BFF]/25">
               Return to Catalog
             </Link>
           </div>
@@ -193,32 +194,44 @@ const ProductDetail = () => {
       
       <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
 
-      {/* Breadcrumb Navigation */}
+      {/* Breadcrumb & Circular Back Button */}
       <div className="bg-white border-b border-slate-100 py-3.5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center gap-2 text-xs font-semibold text-slate-400">
-          <Link to="/" className="hover:text-slate-800">Home</Link>
-          <ChevronRight size={13} />
-          <Link to="/shop" className="hover:text-slate-800">Shop</Link>
-          <ChevronRight size={13} />
-          <span className="text-slate-800 font-bold truncate max-w-xs">{product.title}</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-full bg-white border border-slate-200/80 shadow-2xs flex items-center justify-center text-slate-800 hover:bg-[#F4F4F8] transition active:scale-95"
+              title="Go Back"
+            >
+              <ArrowLeft size={16} strokeWidth={2.5} />
+            </button>
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
+              <Link to="/" className="hover:text-slate-800">Home</Link>
+              <ChevronRight size={13} />
+              <Link to="/shop" className="hover:text-slate-800">Shop</Link>
+              <ChevronRight size={13} />
+              <span className="text-slate-800 font-bold truncate max-w-xs">{product.title}</span>
+            </div>
+          </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 flex-1 w-full space-y-12">
         
         {/* TOP SECTION: GALLERY + DETAILS */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 bg-white p-8 rounded-3xl border border-slate-100 shadow-xs">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 bg-white p-6 sm:p-8 rounded-[36px] border border-slate-100 shadow-2xs">
           
           {/* LEFT: Multi-Image Gallery */}
           <div className="lg:col-span-6 space-y-4">
-            <div className="w-full h-96 sm:h-[460px] rounded-3xl bg-slate-50 flex items-center justify-center overflow-hidden border border-slate-100 relative group">
+            <div className="w-full h-96 sm:h-[460px] rounded-[32px] bg-[#F4F4F8] flex items-center justify-center overflow-hidden border border-slate-100 relative group p-4">
               <img
                 src={galleryImages[selectedImageIdx]?.imageUrl}
                 alt={product.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
               />
               {discountPercent > 0 && (
-                <span className="absolute top-4 left-4 px-3 py-1 bg-rose-500 text-white text-xs font-black rounded-full uppercase shadow-md">
+                <span className="absolute top-4 left-4 px-3 py-1 bg-[#FEEA85] text-slate-900 text-xs font-black rounded-full uppercase shadow-xs">
                   {discountPercent}% OFF
                 </span>
               )}
@@ -232,11 +245,11 @@ const ProductDetail = () => {
                     key={idx}
                     type="button"
                     onClick={() => setSelectedImageIdx(idx)}
-                    className={`w-20 h-20 rounded-2xl overflow-hidden border-2 transition shrink-0 ${
-                      selectedImageIdx === idx ? 'border-[#00B074] shadow-md' : 'border-slate-100 opacity-60 hover:opacity-100'
+                    className={`w-20 h-20 rounded-2xl overflow-hidden border-2 transition shrink-0 p-1 bg-[#F4F4F8] ${
+                      selectedImageIdx === idx ? 'border-[#635BFF] shadow-md' : 'border-slate-100 opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img.imageUrl} alt="thumbnail" className="w-full h-full object-cover" />
+                    <img src={img.imageUrl} alt="thumbnail" className="w-full h-full object-contain" />
                   </button>
                 ))}
               </div>
@@ -247,8 +260,8 @@ const ProductDetail = () => {
           <div className="lg:col-span-6 space-y-6 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-[#00B074] bg-[#E8F8F0] px-3 py-1 rounded-full uppercase tracking-wider">
-                  {product.brand || 'FreshCart Certified'}
+                <span className="text-xs font-black text-[#635BFF] bg-[#EFEBFF] px-3.5 py-1 rounded-full uppercase tracking-wider">
+                  {product.brand || 'Certified'}
                 </span>
                 <span className="text-xs text-slate-400 font-medium">SKU: {selectedVariant?.sku || 'FC-DIRECT'}</span>
               </div>
@@ -279,7 +292,7 @@ const ProductDetail = () => {
                 {comparePrice > currentPrice && (
                   <span className="text-base text-slate-400 line-through">₹{comparePrice.toFixed(0)}</span>
                 )}
-                <span className="text-xs font-bold text-[#00B074] bg-emerald-50 px-2 py-0.5 rounded-md">
+                <span className="text-xs font-bold text-[#635BFF] bg-[#EFEBFF] px-2.5 py-0.5 rounded-full">
                   Inclusive of all taxes
                 </span>
               </div>
@@ -287,7 +300,7 @@ const ProductDetail = () => {
               {/* Variant Selector: Pack Size / Weight */}
               {product.variants && product.variants.length > 1 && (
                 <div className="mt-6">
-                  <label className="block text-xs font-bold text-slate-700 mb-2">Select Pack Size / Quantity:</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-2">Select Option / Size:</label>
                   <div className="flex flex-wrap gap-2.5">
                     {product.variants.map((v) => {
                       const isSelected = selectedVariant?._id === v._id;
@@ -297,9 +310,9 @@ const ProductDetail = () => {
                           key={v._id}
                           type="button"
                           onClick={() => setSelectedVariant(v)}
-                          className={`px-4 py-2 rounded-2xl text-xs font-bold border transition ${
+                          className={`px-4 py-2 rounded-full text-xs font-bold border transition ${
                             isSelected
-                              ? 'border-[#00B074] bg-[#E8F8F0] text-[#00B074] shadow-xs'
+                              ? 'border-[#635BFF] bg-[#EFEBFF] text-[#635BFF] shadow-xs'
                               : 'border-slate-200 text-slate-700 hover:border-slate-300'
                           }`}
                         >
@@ -315,8 +328,8 @@ const ProductDetail = () => {
               <div className="mt-6 flex items-center gap-2 text-xs font-bold">
                 {stockQty > 0 ? (
                   <>
-                    <span className="w-2.5 h-2.5 rounded-full bg-[#00B074] animate-pulse" />
-                    <span className="text-[#00B074]">In Stock ({stockQty} units ready for immediate dispatch)</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-[#635BFF] animate-pulse" />
+                    <span className="text-[#635BFF]">In Stock ({stockQty} units ready for immediate dispatch)</span>
                   </>
                 ) : (
                   <>
@@ -330,11 +343,11 @@ const ProductDetail = () => {
               <div className="mt-8 space-y-3">
                 <div className="flex items-center gap-4">
                   {/* Stepper */}
-                  <div className="flex items-center border border-slate-200 rounded-2xl bg-slate-50 p-1">
+                  <div className="flex items-center border border-slate-200 rounded-full bg-[#F4F4F8] p-1">
                     <button
                       type="button"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-8 h-8 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition shadow-2xs"
                     >
                       <Minus size={14} />
                     </button>
@@ -342,21 +355,21 @@ const ProductDetail = () => {
                     <button
                       type="button"
                       onClick={() => setQuantity(quantity + 1)}
-                      className="w-8 h-8 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition shadow-2xs"
                     >
                       <Plus size={14} />
                     </button>
                   </div>
 
-                  {/* Add to Cart CTA */}
+                  {/* Add to Cart CTA (Royal Purple Pill Button) */}
                   <button
                     type="button"
                     disabled={stockQty <= 0}
                     onClick={handleAddToCart}
-                    className="flex-1 py-3.5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl font-black text-xs transition shadow-lg shadow-[#00B074]/25 flex items-center justify-center gap-2 disabled:opacity-50"
+                    className="flex-1 py-4 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full font-black text-xs transition shadow-xl shadow-[#635BFF]/30 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
                   >
                     <ShoppingCart size={17} />
-                    <span>Add to Cart</span>
+                    <span>Move to Bag</span>
                   </button>
                 </div>
 
@@ -365,9 +378,9 @@ const ProductDetail = () => {
                   type="button"
                   disabled={stockQty <= 0}
                   onClick={handleBuyNow}
-                  className="w-full py-3.5 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-xs transition shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-3.5 bg-[#F4F4F8] hover:bg-[#EAEAF0] text-slate-900 rounded-full font-black text-xs transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
                 >
-                  <Zap size={16} className="text-amber-400" />
+                  <Zap size={16} className="text-[#635BFF]" />
                   <span>Instant 1-Click Buy Now</span>
                 </button>
               </div>
@@ -376,15 +389,15 @@ const ProductDetail = () => {
             {/* Guarantees Strip */}
             <div className="grid grid-cols-3 gap-3 pt-6 border-t border-slate-100 text-center">
               <div className="p-2.5 rounded-2xl bg-slate-50">
-                <Clock size={16} className="mx-auto text-[#00B074] mb-1" />
+                <Clock size={16} className="mx-auto text-[#635BFF] mb-1" />
                 <span className="text-[10px] font-bold text-slate-700 block">15-Min Delivery</span>
               </div>
               <div className="p-2.5 rounded-2xl bg-slate-50">
-                <ShieldCheck size={16} className="mx-auto text-blue-600 mb-1" />
+                <ShieldCheck size={16} className="mx-auto text-[#635BFF] mb-1" />
                 <span className="text-[10px] font-bold text-slate-700 block">100% Genuine</span>
               </div>
               <div className="p-2.5 rounded-2xl bg-slate-50">
-                <RotateCcw size={16} className="mx-auto text-purple-600 mb-1" />
+                <RotateCcw size={16} className="mx-auto text-[#635BFF] mb-1" />
                 <span className="text-[10px] font-bold text-slate-700 block">Easy Return</span>
               </div>
             </div>
@@ -399,34 +412,34 @@ const ProductDetail = () => {
             <button
               onClick={() => setActiveTab('description')}
               className={`text-sm font-black transition pb-2 relative ${
-                activeTab === 'description' ? 'text-[#00B074]' : 'text-slate-400 hover:text-slate-800'
+                activeTab === 'description' ? 'text-[#635BFF]' : 'text-slate-400 hover:text-slate-800'
               }`}
             >
               Description & Benefits
-              {activeTab === 'description' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00B074] rounded-full" />}
+              {activeTab === 'description' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#635BFF] rounded-full" />}
             </button>
 
             <button
               onClick={() => setActiveTab('specs')}
               className={`text-sm font-black transition pb-2 relative ${
-                activeTab === 'specs' ? 'text-[#00B074]' : 'text-slate-400 hover:text-slate-800'
+                activeTab === 'specs' ? 'text-[#635BFF]' : 'text-slate-400 hover:text-slate-800'
               }`}
             >
               Specifications & Storage
-              {activeTab === 'specs' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00B074] rounded-full" />}
+              {activeTab === 'specs' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#635BFF] rounded-full" />}
             </button>
 
             <button
               onClick={() => setActiveTab('reviews')}
               className={`text-sm font-black transition pb-2 relative flex items-center gap-1.5 ${
-                activeTab === 'reviews' ? 'text-[#00B074]' : 'text-slate-400 hover:text-slate-800'
+                activeTab === 'reviews' ? 'text-[#635BFF]' : 'text-slate-400 hover:text-slate-800'
               }`}
             >
               <span>Customer Reviews</span>
               <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
                 {reviewsData.totalReviews}
               </span>
-              {activeTab === 'reviews' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#00B074] rounded-full" />}
+              {activeTab === 'reviews' && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#635BFF] rounded-full" />}
             </button>
           </div>
 
@@ -469,7 +482,7 @@ const ProductDetail = () => {
           {/* Reviews Content */}
           {activeTab === 'reviews' && (
             <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#F8FDFB] p-6 rounded-3xl border border-emerald-100">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#F8F9FD] p-6 rounded-3xl border border-[#635BFF]/15">
                 <div>
                   <h4 className="text-base font-black text-slate-900">Customer Feedback & Ratings</h4>
                   <p className="text-xs text-slate-500 mt-0.5">Real verified purchases from FreshCart users</p>
@@ -477,7 +490,7 @@ const ProductDetail = () => {
                 <button
                   type="button"
                   onClick={() => setShowReviewModal(true)}
-                  className="px-4 py-2.5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                  className="px-5 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-[#635BFF]/25"
                 >
                   <MessageSquarePlus size={15} />
                   <span>Write a Review</span>
@@ -496,7 +509,7 @@ const ProductDetail = () => {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-xs text-slate-900">{rev.userName}</span>
                           {rev.verifiedPurchase && (
-                            <span className="px-2 py-0.5 bg-emerald-50 text-[#00B074] text-[9px] font-black rounded-full uppercase flex items-center gap-1">
+                            <span className="px-2 py-0.5 bg-[#EFEBFF] text-[#635BFF] text-[9px] font-black rounded-full uppercase flex items-center gap-1">
                               <Check size={10} />
                               <span>Verified Buyer</span>
                             </span>
@@ -587,7 +600,7 @@ const ProductDetail = () => {
                   placeholder="e.g. Excellent freshness & taste!"
                   value={reviewTitle}
                   onChange={(e) => setReviewTitle(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                 />
               </div>
 
@@ -599,7 +612,7 @@ const ProductDetail = () => {
                   placeholder="How was the quality, packaging, and taste?"
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                 />
               </div>
 
@@ -607,14 +620,14 @@ const ProductDetail = () => {
                 <button
                   type="button"
                   onClick={() => setShowReviewModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
+                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-full"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmittingReview}
-                  className="px-5 py-2.5 bg-[#00B074] hover:bg-[#009663] text-white text-xs font-black rounded-xl shadow-xs flex items-center gap-1.5"
+                  className="px-6 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white text-xs font-black rounded-full shadow-md shadow-[#635BFF]/25 flex items-center gap-1.5"
                 >
                   {isSubmittingReview ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                   <span>Submit Review</span>

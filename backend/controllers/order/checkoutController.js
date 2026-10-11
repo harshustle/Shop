@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Order = require('../../models/order/Order');
 const Cart = require('../../models/order/Cart');
 const User = require('../../models/auth/User');
@@ -162,12 +163,7 @@ const verifyRazorpayPayment = async (req, res) => {
             coupon_discount || 0
         );
 
-        // 4. Atomic stock decrement for each line item
-        for (const it of pricing.lineItems) {
-            await InventoryService.atomicStockDecrement(it.variantId, it.quantity);
-        }
-
-        // 5. Generate Order Number
+        // 5. Generate Order Number & Payload
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const randomNum = Math.floor(1000 + Math.random() * 9000);
         const orderNumber = `ORD-${dateStr}-${randomNum}`;
@@ -191,8 +187,7 @@ const verifyRazorpayPayment = async (req, res) => {
             ? shipping_address
             : (shipping_address?.address || JSON.stringify(shipping_address || {}));
 
-        // 6. Create Order in MongoDB
-        const order = await Order.create({
+        const orderData = {
             orderNumber,
             customerId: userId,
             customerName: customer_name || 'Customer',
@@ -230,7 +225,35 @@ const verifyRazorpayPayment = async (req, res) => {
                     }
                 ]
             }
-        });
+        };
+
+        // 4 & 6. Atomic stock decrement & Order creation inside a MongoDB ACID transaction
+        let order;
+        let session = null;
+        try {
+            session = await mongoose.startSession();
+            await session.withTransaction(async () => {
+                for (const it of pricing.lineItems) {
+                    await InventoryService.atomicStockDecrement(it.variantId, it.quantity, session);
+                }
+                const [created] = await Order.create([orderData], { session });
+                order = created;
+            });
+        } catch (txErr) {
+            // Standalone MongoDB fallback if replica sets are not enabled
+            if (txErr.message && (txErr.message.includes('replica set') || txErr.message.includes('Transaction numbers'))) {
+                for (const it of pricing.lineItems) {
+                    await InventoryService.atomicStockDecrement(it.variantId, it.quantity, null);
+                }
+                order = await Order.create(orderData);
+            } else {
+                throw txErr;
+            }
+        } finally {
+            if (session) {
+                await session.endSession();
+            }
+        }
 
         // 7. Update user lifetime spend
         if (userId) {
@@ -384,11 +407,6 @@ const createCheckoutOrder = async (req, res) => {
             }
         }
 
-        // 4. Atomic stock decrement for each item
-        for (const it of pricing.lineItems) {
-            await InventoryService.atomicStockDecrement(it.variantId, it.quantity);
-        }
-
         const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
         const randomNum = Math.floor(1000 + Math.random() * 9000);
         const orderNumber = `ORD-${dateStr}-${randomNum}`;
@@ -414,7 +432,7 @@ const createCheckoutOrder = async (req, res) => {
 
         const isPaidOnline = false;
 
-        const order = await Order.create({
+        const orderData = {
             orderNumber,
             customerId: userId,
             customerName: customer_name || 'Customer',
@@ -449,7 +467,34 @@ const createCheckoutOrder = async (req, res) => {
                     }
                 ]
             }
-        });
+        };
+
+        // 4 & 5. Atomic stock decrement & Order creation inside a MongoDB ACID transaction
+        let order;
+        let session = null;
+        try {
+            session = await mongoose.startSession();
+            await session.withTransaction(async () => {
+                for (const it of pricing.lineItems) {
+                    await InventoryService.atomicStockDecrement(it.variantId, it.quantity, session);
+                }
+                const [created] = await Order.create([orderData], { session });
+                order = created;
+            });
+        } catch (txErr) {
+            if (txErr.message && (txErr.message.includes('replica set') || txErr.message.includes('Transaction numbers'))) {
+                for (const it of pricing.lineItems) {
+                    await InventoryService.atomicStockDecrement(it.variantId, it.quantity, null);
+                }
+                order = await Order.create(orderData);
+            } else {
+                throw txErr;
+            }
+        } finally {
+            if (session) {
+                await session.endSession();
+            }
+        }
 
         // Update user spend & cleanup session holds
         if (userId) {

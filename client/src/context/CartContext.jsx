@@ -42,16 +42,23 @@ export const CartProvider = ({ children }) => {
   const activeTokenRef = useRef(typeof window !== 'undefined' ? localStorage.getItem('token') : null);
   const isInitialized = useRef(false);
 
-  const [selectedLocation, setSelectedLocation] = useState({
-    tag: 'Home',
-    address: 'Vibhuti Khand, Gomti Nagar, Lucknow, UP - 226010',
-    flatNumber: 'Flat 402, Tower B',
-    landmark: 'Near Riverside Mall',
-    lat: 26.8520,
-    lng: 80.9510,
-    distanceKm: 0.35,
-    isDeliverable: true,
-    etaMinutes: 10
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    try {
+      const saved = localStorage.getItem('freshcart_selected_location');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      tag: 'Home',
+      title: 'Gandhi Nagar',
+      address: 'Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001',
+      flatNumber: 'Near Company Bagh',
+      landmark: 'Gandhi Nagar',
+      lat: 26.8028,
+      lng: 82.7634,
+      distanceKm: 0.5,
+      isDeliverable: true,
+      etaMinutes: 10
+    };
   });
 
   // Fetch cart directly from Redis on backend
@@ -291,6 +298,14 @@ export const CartProvider = ({ children }) => {
   const getCartCount = () => itemCount;
   const getCartTotal = () => grandTotal;
 
+  const getItemQuantity = (variantOrProductId) => {
+    if (!items || !items.length) return 0;
+    const match = items.find(
+      (it) => it.variantId === variantOrProductId || it.productId === variantOrProductId || it.sku === variantOrProductId
+    );
+    return match ? match.quantity : 0;
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -306,6 +321,7 @@ export const CartProvider = ({ children }) => {
         addToCart,
         removeFromCart,
         clearCart,
+        getItemQuantity,
         applyCouponCode,
         removeCoupon,
         getCartCount,
@@ -319,6 +335,7 @@ export const CartProvider = ({ children }) => {
         openLocationModal: () => setIsLocationModalOpen(true),
         selectedLocation,
         setSelectedLocation: setLocation,
+        setLocation,
         isLoadingFromRedis
       }}
     >

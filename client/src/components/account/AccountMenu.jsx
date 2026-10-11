@@ -41,17 +41,19 @@ const AccountMenu = ({
           type="button"
           onClick={() => onSelectTab('wallet')}
           className={`w-full flex items-center justify-between px-3.5 py-3 rounded-2xl transition group text-left ${
-            activeTab === 'wallet' ? 'bg-emerald-50/80 text-emerald-900' : 'hover:bg-slate-50 text-slate-800'
+            activeTab === 'wallet' ? 'bg-[#EFEBFF] text-[#635BFF]' : 'hover:bg-slate-50 text-slate-800'
           }`}
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 group-hover:scale-105 transition ${
+              activeTab === 'wallet' ? 'bg-[#635BFF] text-white' : 'bg-[#EFEBFF] text-[#635BFF]'
+            }`}>
               <Wallet size={18} className="stroke-[2.2]" />
             </div>
             <span className="text-sm font-bold tracking-tight">My Wallet</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-black text-xs">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#EFEBFF] text-[#635BFF] font-black text-xs">
               ₹{walletBalance}
             </span>
             <ChevronRight size={16} className="text-slate-300 group-hover:text-slate-500 transition" />

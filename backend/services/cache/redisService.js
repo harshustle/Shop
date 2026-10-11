@@ -221,46 +221,14 @@ class RedisService {
             }
         }
 
-        // Tokenized in-memory atomic reservation
-        if (!this.inMemoryHoldTokens) {
-            this.inMemoryHoldTokens = new Map(); // token -> { sku, quantity, expiresAt }
-        }
-
-        const now = Date.now();
-        // Calculate active reserved for this SKU across valid tokens
-        let activeReserved = 0;
-        for (const [t, data] of this.inMemoryHoldTokens.entries()) {
-            if (data.sku === sku) {
-                if (now <= data.expiresAt) {
-                    activeReserved += data.quantity;
-                } else {
-                    this.inMemoryHoldTokens.delete(t);
-                }
-            }
-        }
-
-        const available = Math.max(0, physicalStock - activeReserved);
-        if (available >= requestedQty) {
-            const newReserved = activeReserved + requestedQty;
-            this.inMemoryHoldTokens.set(token, {
-                sku,
-                quantity: requestedQty,
-                expiresAt: now + ttlSeconds * 1000
-            });
-            return {
-                success: true,
-                available: physicalStock - newReserved,
-                reserved: newReserved,
-                holdToken: token
-            };
-        } else {
-            return {
-                success: false,
-                available,
-                reserved: activeReserved,
-                holdToken: null
-            };
-        }
+        // Redis is unavailable or unconfigured.
+        // DO NOT silently fall back to per-process local memory for critical stock locks (avoids PM2 multi-worker split-brain)!
+        return {
+            success: false,
+            isRedisAvailable: false,
+            holdToken: token,
+            message: 'Redis cluster offline. Authoritative database locking required.'
+        };
     }
 
     /**

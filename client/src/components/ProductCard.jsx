@@ -1,136 +1,152 @@
-import React, { useState } from 'react';
-import { Clock, Plus, Minus, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { ShoppingBag, Heart, Plus, Minus } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 const ProductCard = ({ product }) => {
   const { addToCart, removeFromCart, getItemQuantity } = useCart();
   
-  // Select first variant by default
   const variants = product.variants || [];
-  const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
-
-  const currentVariant = variants[selectedVariantIndex] || {
+  const currentVariant = variants[0] || {
     _id: product._id,
     sku: 'SKU-DIRECT',
-    price: product.basePrice || product.price || 299,
-    compareAtPrice: product.compareAtPrice || Math.round((product.basePrice || 299) * 1.25),
-    stockQuantity: 50,
-    attributes: {}
+    price: product.basePrice || product.price || 199,
+    compareAtPrice: product.compareAtPrice || Math.round((product.basePrice || 199) * 1.2),
+    stockQuantity: 50
   };
 
-  const variantId = currentVariant._id || currentVariant.variant_id || currentVariant.sku || product._id;
-  const quantity = getItemQuantity(variantId);
+  const variantId = currentVariant._id || product._id;
+  const quantity = typeof getItemQuantity === 'function' ? getItemQuantity(variantId) : 0;
 
-  const price = currentVariant.price || product.basePrice || 299;
-  const comparePrice = currentVariant.compareAtPrice || Math.round(price * 1.25);
+  const price = currentVariant.price || product.basePrice || product.price || 199;
+  const comparePrice = currentVariant.compareAtPrice || product.compareAtPrice || Math.round(price * 1.2);
   const discountPercent = comparePrice > price 
     ? Math.round(((comparePrice - price) / comparePrice) * 100) 
-    : 0;
+    : (product.discountPercent || 15);
 
-  const imageUrl = product.images?.[0]?.imageUrl || product.primary_image?.image_url || product.image || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=500&q=80';
+  const imageUrl = product.images?.[0]?.imageUrl || product.primary_image?.image_url || product.image || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80';
+
+  const [isWishlisted, setIsWishlisted] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('freshcart_wishlist') || '[]');
+      if (Array.isArray(saved) && saved.includes(product._id)) {
+        setIsWishlisted(true);
+      }
+    } catch (e) {}
+  }, [product._id]);
+
+  const toggleWishlist = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextState = !isWishlisted;
+    setIsWishlisted(nextState);
+
+    try {
+      let saved = JSON.parse(localStorage.getItem('freshcart_wishlist') || '[]');
+      if (nextState) {
+        if (!saved.includes(product._id)) saved.push(product._id);
+      } else {
+        saved = saved.filter(id => id !== product._id);
+      }
+      localStorage.setItem('freshcart_wishlist', JSON.stringify(saved));
+      window.dispatchEvent(new Event('wishlist-updated'));
+    } catch (e) {}
+  };
 
   return (
-    <div className="group bg-white rounded-2xl p-3 sm:p-4 border border-gray-100 hover:border-gray-200 hover:shadow-md transition-all duration-300 flex flex-col justify-between relative">
+    <div className="group bg-[var(--app-card)] rounded-2xl p-2 border border-black/[0.04] dark:border-white/[0.06] hover:border-black/[0.08] transition-all flex flex-col justify-between relative">
       
-      {/* Top Image & 8 MINS delivery badge */}
-      <div>
-        <div className="relative w-full aspect-square bg-gray-50 rounded-xl overflow-hidden mb-3">
-          {/* 8 MINS Badge */}
-          <div className="absolute top-2 left-2 z-10 flex items-center gap-1 bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded-md text-[10px] font-extrabold text-emerald-800 shadow-xs border border-emerald-100">
-            <Clock size={11} className="text-emerald-600" />
-            <span>8 MINS</span>
-          </div>
-
-          {/* Discount Tag */}
-          {discountPercent > 0 && (
-            <div className="absolute top-2 right-2 z-10 bg-[#0C831F] text-white text-[10px] font-black px-1.5 py-0.5 rounded-md tracking-tight shadow-xs">
-              {discountPercent}% OFF
-            </div>
-          )}
-
-          {/* Product Image */}
-          <img
-            src={imageUrl}
-            alt={product.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            loading="lazy"
-          />
-        </div>
-
-        {/* Variant selector chips if multiple variants */}
-        {variants.length > 1 && (
-          <div className="flex flex-wrap gap-1 mb-2">
-            {variants.slice(0, 3).map((v, idx) => {
-              const label = v.attributes?.size || v.attributes?.color || v.sku;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedVariantIndex(idx)}
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition ${
-                    selectedVariantIndex === idx
-                      ? 'border-[#0C831F] bg-emerald-50 text-[#0C831F]'
-                      : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
+      {/* Product Image: Compact mobile aspect */}
+      <div className="relative w-full aspect-square max-h-32 bg-black/[0.02] dark:bg-white/[0.04] rounded-xl overflow-hidden mb-1.5 p-1.5 flex items-center justify-center">
+        
+        {/* Yellow Discount Pill */}
+        {discountPercent > 0 && (
+          <div className="absolute top-1.5 left-1.5 z-10 bg-[#FEEA85] text-slate-900 text-[8px] font-black px-1 py-0.2 rounded-full">
+            {discountPercent}%
           </div>
         )}
 
-        {/* Title */}
-        <h4 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1 group-hover:text-emerald-900 transition">
-          {product.title}
-        </h4>
+        {/* Wishlist Heart */}
+        <button
+          type="button"
+          onClick={toggleWishlist}
+          className="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-white/90 dark:bg-slate-800/90 text-slate-400 hover:text-rose-500 transition flex items-center justify-center"
+          title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+        >
+          <Heart 
+            size={10} 
+            className={isWishlisted ? "fill-rose-500 text-rose-500" : "text-slate-400"} 
+          />
+        </button>
 
-        {/* Brand / Category subline */}
-        <p className="text-xs text-gray-400 font-medium mb-3">
-          {product.brand || product.categoryName || 'Authentic Quality'}
-        </p>
+        {/* Image */}
+        <Link to={`/product/${product.slug || product._id}`} className="w-full h-full flex items-center justify-center">
+          <img
+            src={imageUrl}
+            alt={product.title || product.name || 'Product'}
+            className="w-full h-full object-contain group-hover:scale-102 transition-transform duration-200"
+            loading="lazy"
+            onError={(e) => {
+              e.target.src = 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=300&q=80';
+            }}
+          />
+        </Link>
       </div>
 
-      {/* Bottom Pricing & ADD Button */}
-      <div className="flex items-center justify-between pt-2 border-t border-gray-50 mt-auto">
-        <div className="flex flex-col">
-          <div className="flex items-baseline gap-1.5">
-            <span className="text-base font-extrabold text-gray-900">₹{price}</span>
-            {comparePrice > price && (
-              <span className="text-xs text-gray-400 line-through">₹{comparePrice}</span>
-            )}
-          </div>
-          <span className="text-[10px] text-emerald-700 font-semibold">Instant Stock</span>
-        </div>
+      {/* Product Info: Small text */}
+      <div className="mb-1.5 px-0.5 space-y-0.5">
+        <Link 
+          to={`/product/${product.slug || product._id}`}
+          className="font-semibold text-[var(--app-text-primary)] text-[11px] leading-tight line-clamp-1 hover:text-[#635BFF] transition block"
+        >
+          {product.title || product.name || 'Item'}
+        </Link>
 
-        {/* Quantity Stepper Button */}
-        <div>
-          {quantity === 0 ? (
-            <button
-              onClick={() => addToCart(product, currentVariant)}
-              className="px-5 py-1.5 bg-emerald-50 text-[#0C831F] border border-[#0C831F] hover:bg-[#0C831F] hover:text-white rounded-lg font-black text-xs transition duration-200 shadow-xs active:scale-95"
-            >
-              ADD
-            </button>
-          ) : (
-            <div className="flex items-center bg-[#0C831F] text-white rounded-lg shadow-sm font-extrabold text-xs overflow-hidden">
-              <button
-                onClick={() => removeFromCart(variantId)}
-                className="px-2.5 py-1.5 hover:bg-[#0A6E1A] transition active:scale-90"
-              >
-                <Minus size={13} />
-              </button>
-              <span className="px-2 py-1 min-w-[20px] text-center font-black">
-                {quantity}
-              </span>
-              <button
-                onClick={() => addToCart(product, currentVariant)}
-                className="px-2.5 py-1.5 hover:bg-[#0A6E1A] transition active:scale-90"
-              >
-                <Plus size={13} />
-              </button>
-            </div>
+        {/* Price */}
+        <div className="flex items-baseline gap-1">
+          <span className="text-xs font-bold text-[var(--app-text-primary)]">
+            ₹{price}
+          </span>
+          {comparePrice > price && (
+            <span className="text-[9px] text-slate-400 line-through">
+              ₹{comparePrice}
+            </span>
           )}
         </div>
+      </div>
+
+      {/* Button: Minimal pill button */}
+      <div className="mt-auto">
+        {quantity === 0 ? (
+          <button
+            type="button"
+            onClick={() => addToCart(product, currentVariant)}
+            className="w-full py-1.5 px-2 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-[#635BFF] hover:text-white text-[var(--app-text-primary)] rounded-full text-[10px] font-semibold transition flex items-center justify-center gap-1 active:scale-95 group/btn"
+          >
+            <ShoppingBag size={11} className="text-slate-500 group-hover/btn:text-white" />
+            <span>Move to bag</span>
+          </button>
+        ) : (
+          <div className="w-full py-1 px-2 bg-[#635BFF] text-white rounded-full flex items-center justify-between text-[11px] font-bold">
+            <button
+              type="button"
+              onClick={() => removeFromCart(variantId)}
+              className="p-0.5 hover:bg-white/20 rounded-full transition active:scale-90"
+            >
+              <Minus size={10} />
+            </button>
+            <span className="px-1 text-[10px]">{quantity}</span>
+            <button
+              type="button"
+              onClick={() => addToCart(product, currentVariant)}
+              className="p-0.5 hover:bg-white/20 rounded-full transition active:scale-90"
+            >
+              <Plus size={10} />
+            </button>
+          </div>
+        )}
       </div>
 
     </div>

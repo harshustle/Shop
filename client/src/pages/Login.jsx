@@ -27,10 +27,12 @@ import {
   sendFirebaseOtp, 
   confirmFirebaseOtp 
 } from '../firebase';
+import { useTheme } from '../context/ThemeContext';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { theme, setTheme } = useTheme();
 
   // Redirect if already authenticated as admin
   useEffect(() => {
@@ -435,39 +437,63 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F7FB] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text-primary)] flex flex-col font-sans transition-colors duration-200">
       
       {/* Invisible container for Firebase reCAPTCHA */}
       <div id="recaptcha-container"></div>
 
-      {/* Brand Header */}
-      <div className="mb-6 text-center">
-        <Link to="/" className="inline-flex items-center gap-3 group">
-          <div className="w-12 h-12 rounded-2xl bg-[#00B074] flex items-center justify-center shadow-lg shadow-[#00B074]/25 text-white transition-transform group-hover:scale-105">
-            <ShoppingBag size={26} strokeWidth={2.4} />
-          </div>
-          <span className="text-3xl font-black text-slate-900 tracking-tight">FreshCart</span>
+      {/* Sleek Minimal Header */}
+      <header className="px-4 py-3 flex items-center justify-between border-b border-black/[0.04] dark:border-white/[0.06]">
+        <Link to="/" className="text-lg font-black lowercase tracking-tighter text-[var(--app-text-primary)]">
+          fresh
         </Link>
-        <p className="text-xs font-semibold text-slate-500 mt-2 tracking-wide">
-          Fresh Groceries & Essentials • Superfast 10-15 Min Delivery
-        </p>
-      </div>
 
-      {/* Main Auth Container */}
-      <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-100 shadow-xl shadow-slate-200/50 relative">
+        {/* 3-Theme Switcher */}
+        <div className="flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.08] p-0.5 rounded-full">
+          <button
+            type="button"
+            onClick={() => setTheme('white')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition ${
+              theme === 'white' ? 'bg-white shadow-xs text-slate-900' : 'text-slate-500'
+            }`}
+          >
+            White
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme('dark')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition ${
+              theme === 'dark' ? 'bg-slate-900 shadow-xs text-white' : 'text-slate-400'
+            }`}
+          >
+            Dark
+          </button>
+          <button
+            type="button"
+            onClick={() => setTheme('yellow')}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition ${
+              theme === 'yellow' ? 'bg-amber-400 shadow-xs text-slate-900' : 'text-slate-500'
+            }`}
+          >
+            Yellow
+          </button>
+        </div>
+      </header>
+
+      {/* Main Container: Flat, simple, non-card mobile layout */}
+      <div className="flex-1 max-w-sm w-full mx-auto px-5 py-6 flex flex-col justify-center">
         
         {/* Step Header */}
-        <div className="mb-5">
+        <div className="mb-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2">
-              {isOtpStep ? 'Verify OTP' : 'Welcome Back'}
-              {!isOtpStep && <Sparkles size={20} className="text-[#00B074]" />}
+            <h2 className="text-lg font-black text-[var(--app-text-primary)] flex items-center gap-1.5">
+              {isOtpStep ? 'Verify OTP' : 'Welcome back'}
             </h2>
 
             {/* Firebase Active Badge */}
             {authChannel === 'phone' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-50 border border-amber-200 text-amber-700">
-                <Flame size={12} className="text-amber-500" />
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EFEBFF] border border-[#635BFF]/20 text-[#635BFF]">
+                <Flame size={12} className="text-[#635BFF]" />
                 Firebase 10k Free
               </span>
             )}
@@ -499,7 +525,7 @@ const Login = () => {
 
         {successMsg && (
           <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl text-xs text-emerald-700 font-bold flex items-center gap-2">
-            <CheckCircle2 size={16} className="shrink-0 text-[#00B074]" />
+            <CheckCircle2 size={16} className="shrink-0 text-[#635BFF]" />
             <span>{successMsg}</span>
           </div>
         )}
@@ -521,7 +547,7 @@ const Login = () => {
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <Phone size={15} className={authChannel === 'phone' ? 'text-[#00B074]' : ''} />
+                <Phone size={15} className={authChannel === 'phone' ? 'text-[#635BFF]' : ''} />
                 <span>Mobile Phone</span>
               </button>
 
@@ -537,7 +563,7 @@ const Login = () => {
                     : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
-                <Mail size={15} className={authChannel === 'email' ? 'text-[#00B074]' : ''} />
+                <Mail size={15} className={authChannel === 'email' ? 'text-[#635BFF]' : ''} />
                 <span>Email Address</span>
               </button>
             </div>
@@ -580,7 +606,7 @@ const Login = () => {
                       placeholder="9876543210"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-16 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074] transition"
+                      className="w-full pl-16 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
                     />
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1 font-medium">
@@ -603,7 +629,7 @@ const Login = () => {
                       placeholder="name@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074] transition"
+                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
                     />
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1 font-medium">
@@ -631,7 +657,7 @@ const Login = () => {
                         setResetSuccess('');
                         setShowOtpModal(true);
                       }}
-                      className="text-[11px] font-bold text-[#00B074] hover:underline"
+                      className="text-[11px] font-bold text-[#635BFF] hover:underline"
                     >
                       Forgot Password?
                     </button>
@@ -644,7 +670,7 @@ const Login = () => {
                       placeholder="Enter your account password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
+                      className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF]"
                     />
                     <button
                       type="button"
@@ -662,7 +688,7 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3.5 bg-[#00B074] text-white rounded-2xl font-black text-sm hover:bg-[#009663] transition shadow-lg shadow-[#00B074]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-2"
+                className="w-full py-3.5 bg-[#635BFF] text-white rounded-full font-black text-sm hover:bg-[#5248EE] transition shadow-lg shadow-[#635BFF]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-2"
               >
                 {isLoading ? (
                   <>
@@ -702,7 +728,7 @@ const Login = () => {
                     setAuthMethod('password');
                     setError('');
                   }}
-                  className="text-xs font-bold text-slate-600 hover:text-[#00B074] transition"
+                  className="text-xs font-bold text-slate-600 hover:text-[#635BFF] transition"
                 >
                   Prefer password? <span className="underline">Sign in with password</span>
                 </button>
@@ -713,7 +739,7 @@ const Login = () => {
                     setAuthMethod('otp');
                     setError('');
                   }}
-                  className="text-xs font-bold text-[#00B074] hover:underline transition"
+                  className="text-xs font-bold text-[#635BFF] hover:underline transition"
                 >
                   ⚡ Sign in with OTP (Passwordless)
                 </button>
@@ -740,7 +766,7 @@ const Login = () => {
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                 autoFocus
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-mono tracking-widest text-center font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-mono tracking-widest text-center font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF]"
               />
             </div>
 
@@ -748,7 +774,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading || otpCode.length < 4}
-              className="w-full py-3.5 bg-[#00B074] text-white rounded-2xl font-black text-sm hover:bg-[#009663] transition shadow-lg shadow-[#00B074]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+              className="w-full py-3.5 bg-[#635BFF] text-white rounded-full font-black text-sm hover:bg-[#5248EE] transition shadow-lg shadow-[#635BFF]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
             >
               {isLoading ? (
                 <>
@@ -784,9 +810,9 @@ const Login = () => {
                 type="button"
                 disabled={resendCountdown > 0 || isLoading}
                 onClick={handleSendLoginOtp}
-                className="font-bold text-[#00B074] hover:underline disabled:text-slate-400 disabled:no-underline flex items-center gap-1"
+                className="font-bold text-[#635BFF] hover:underline disabled:text-slate-400 disabled:no-underline flex items-center gap-1"
               >
-                <RotateCw size={13} className={resendCountdown > 0 ? '' : 'text-[#00B074]'} />
+                <RotateCw size={13} className={resendCountdown > 0 ? '' : 'text-[#635BFF]'} />
                 {resendCountdown > 0 ? `Resend code in ${resendCountdown}s` : 'Resend OTP'}
               </button>
             </div>
@@ -797,7 +823,7 @@ const Login = () => {
         <div className="mt-6 pt-4 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-500">
             Don't have an account yet?{' '}
-            <Link to="/register" className="font-bold text-[#00B074] hover:underline">
+            <Link to="/register" className="font-bold text-[#635BFF] hover:underline">
               Create Account
             </Link>
           </p>

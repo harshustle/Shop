@@ -1,458 +1,196 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
-  ShoppingBag, 
-  ArrowRight, 
-  Sparkles, 
-  Zap, 
-  Clock, 
-  ShieldCheck, 
-  Star, 
   ChevronRight, 
-  ChevronLeft,
-  Flame,
-  CheckCircle2,
-  Tag,
-  Plus
+  MapPin
 } from 'lucide-react';
 import FreshCartNavbar from '../components/FreshCartNavbar';
 import FreshCartFooter from '../components/FreshCartFooter';
 import CartDrawer from '../components/CartDrawer';
 import CheckoutModal from '../components/CheckoutModal';
+import ProductCard from '../components/ProductCard';
+import LocationPickerModal from '../components/LocationPickerModal';
 import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
 
-const CATEGORIES_DATA = [
-  { slug: 'staples-and-grains', name: 'Atta & Flours', icon: '🌾', count: '45 items', color: '#FEF3C7' },
-  { slug: 'edible-oils', name: 'Oils & Ghee', icon: '🛢️', count: '28 items', color: '#E0F2FE' },
-  { slug: 'fresh-fruits', name: 'Fresh Fruits', icon: '🍎', count: '62 items', color: '#FEE2E2' },
-  { slug: 'organic-vegetables', name: 'Vegetables', icon: '🥦', count: '54 items', color: '#E8F8F0' },
-  { slug: 'dairy-breakfast', name: 'Milk & Dairy', icon: '🥛', count: '38 items', color: '#EDE9FE' },
-  { slug: 'packaged-foods-snacks', name: 'Tea & Snacks', icon: '☕', count: '40 items', color: '#FFEDD5' }
-];
-
-const TESTIMONIALS = [
-  {
-    name: 'Ananya Verma',
-    location: 'Vibhuti Khand, Lucknow',
-    rating: 5,
-    text: 'FreshCart has completely changed how our family shops for groceries. The vegetables arrive fresh as morning harvest, and delivery is consistently under 15 minutes!',
-    avatar: 'AV'
-  },
-  {
-    name: 'Rajesh Malhotra',
-    location: 'Indira Nagar, Lucknow',
-    rating: 5,
-    text: 'Genuine wholesale prices for Fortune oil and Aashirvaad Atta. Plus the checkout with coupon FRESH20 saved me an extra ₹150. Highly satisfied!',
-    avatar: 'RM'
-  },
-  {
-    name: 'Sneha Kapoor',
-    location: 'Aliganj, Lucknow',
-    rating: 5,
-    text: 'The best customer support in town. One item was slightly bruised and they replaced it in 10 minutes with zero hassle. Truly 5-star service.',
-    avatar: 'SK'
-  }
+const CATEGORIES = [
+  { slug: 'dairy-breakfast', name: 'Dairy', icon: '🥛', color: '#EDE9FE' },
+  { slug: 'staples-and-grains', name: 'Atta & Rice', icon: '🌾', color: '#FEF3C7' },
+  { slug: 'edible-oils', name: 'Oils & Ghee', icon: '🛢️', color: '#E0F2FE' },
+  { slug: 'packaged-foods-snacks', name: 'Snacks', icon: '☕', color: '#FFEDD5' },
+  { slug: 'organic-vegetables', name: 'Vegetables', icon: '🥦', color: '#E8F8F0' },
+  { slug: 'fresh-fruits', name: 'Fruits', icon: '🍎', color: '#FEE2E2' }
 ];
 
 const Home = () => {
-  const navigate = useNavigate();
-  const { addToCart, setIsLocationModalOpen } = useCart();
+  const { 
+    isLocationModalOpen, 
+    setIsLocationModalOpen, 
+    selectedLocation 
+  } = useCart();
 
-  // Home page open hote hi location maange
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLocationModalOpen(true);
-    }, 150);
-    return () => clearTimeout(timer);
-  }, [setIsLocationModalOpen]);
-
-  const [banners, setBanners] = useState([]);
-  const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
-  const [bestSellers, setBestSellers] = useState([]);
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [offersList, setOffersList] = useState([]);
-  const [coupons, setCoupons] = useState([]);
+  const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Cart & Checkout Drawers
+  // Cart & Checkout
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-
+  // Automatically open Basti map modal on first homepage visit
   useEffect(() => {
-    const fetchHomeData = async () => {
+    const hasSeenMap = sessionStorage.getItem('fresh_basti_map_opened');
+    if (!hasSeenMap) {
+      setIsLocationModalOpen(true);
+      sessionStorage.setItem('fresh_basti_map_opened', 'true');
+    }
+  }, [setIsLocationModalOpen]);
+
+  // Fetch real Blinkit grocery items
+  useEffect(() => {
+    const fetchCatalog = async () => {
       try {
-        // Fetch Banners
-        const bannerRes = await fetch(`${API_URL}/api/banners`);
-        if (bannerRes.ok) {
-          const bannerData = await bannerRes.json();
-          setBanners(bannerData);
-        }
-
-        // Fetch Coupons
-        const couponRes = await fetch(`${API_URL}/api/coupons/active`);
-        if (couponRes.ok) {
-          const couponData = await couponRes.json();
-          setCoupons(couponData);
-        }
-
-        // Fetch Products
-        const prodRes = await fetch(`${API_URL}/api/catalog/search?limit=24`);
-        if (prodRes.ok) {
-          const prodData = await prodRes.json();
-          const items = prodData.items || prodData.products || [];
-          setBestSellers(items.slice(0, 8));
-          setNewArrivals(items.slice(4, 12));
-          setOffersList(items.slice(2, 6));
+        const res = await fetch(`${API_URL}/api/catalog/search?limit=36`);
+        if (res.ok) {
+          const data = await res.json();
+          setProducts(data.items || data.products || []);
         }
       } catch (err) {
-        console.warn('Home fetch notice:', err);
+        console.warn('Catalog fetch notice:', err);
       } finally {
         setIsLoading(false);
       }
     };
-
-    fetchHomeData();
+    fetchCatalog();
   }, []);
 
-  // Banner autoplay timer
-  useEffect(() => {
-    if (banners.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentBannerIdx((prev) => (prev + 1) % banners.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [banners.length]);
-
-  const activeBanner = banners[currentBannerIdx] || {
-    title: 'Farm-Fresh Grocery Delivered in 15 Minutes',
-    subtitle: 'Daily organic fruits, vegetables, pure dairy & staples at genuine wholesale prices',
-    badge: '⚡ Instant 15-Minute Delivery',
-    imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80',
-    targetUrl: '/shop',
-    bgColor: '#E8F8F0',
-    textColor: '#064E3B',
-    btnText: 'Shop All Products'
-  };
-
-  const handleQuickAdd = (e, product) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const primaryVariant = (product.variants && product.variants[0]) || {
-      _id: 'default-var',
-      price: product.basePrice,
-      sku: 'SKU-DIRECT'
-    };
-    addToCart(product, primaryVariant, 1);
-    setIsCartOpen(true);
-  };
+  const dailyPicks = products.slice(0, 8);
+  const pantryStaples = products.slice(8, 20);
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text-primary)] flex flex-col font-sans transition-colors duration-200">
       
-      {/* FreshCart Navigation */}
+      {/* Sleek Minimal Navbar */}
       <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
 
-      <main className="flex-1 space-y-12">
+      {/* Main Content Container */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-3 space-y-4">
 
-        {/* 1. HERO BANNER SLIDER */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-          <div 
-            style={{ backgroundColor: activeBanner.bgColor || '#E8F8F0' }}
-            className="rounded-3xl p-8 sm:p-12 transition-all duration-700 relative overflow-hidden shadow-sm border border-black/5 flex flex-col lg:flex-row items-center justify-between gap-8 min-h-[360px]"
-          >
-            {/* Left Content */}
-            <div className="max-w-xl z-10 space-y-4">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/80 backdrop-blur-xs rounded-full text-xs font-black text-[#00B074] shadow-xs">
-                <Sparkles size={14} />
-                <span>{activeBanner.badge || '⚡ Special Fresh Offer'}</span>
-              </span>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-                {activeBanner.title}
-              </h1>
-
-              <p className="text-sm sm:text-base text-slate-600 font-medium leading-relaxed">
-                {activeBanner.subtitle}
-              </p>
-
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                <Link
-                  to={activeBanner.targetUrl || '/shop'}
-                  className="px-6 py-3.5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl text-xs font-black transition shadow-lg shadow-[#00B074]/30 flex items-center gap-2"
-                >
-                  <span>{activeBanner.btnText || 'Explore Store'}</span>
-                  <ArrowRight size={16} />
-                </Link>
-
-                <div className="flex items-center gap-2 bg-white/70 px-4 py-2.5 rounded-2xl text-xs font-bold text-slate-700">
-                  <Tag size={15} className="text-[#00B074]" />
-                  <span>Use Coupon: <strong className="text-[#00B074]">FRESH20</strong></span>
-                </div>
-              </div>
+        {/* Minimal Location Header Banner */}
+        <div className="bg-[var(--app-card)] rounded-xl px-3 py-2 border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center shrink-0">
+              <MapPin size={12} />
             </div>
-
-            {/* Right Image Artwork */}
-            <div className="lg:w-1/2 w-full flex items-center justify-center relative">
-              <div className="w-full max-w-md h-64 sm:h-80 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60">
-                <img
-                  src={activeBanner.imageUrl}
-                  alt={activeBanner.title}
-                  className="w-full h-full object-cover transform hover:scale-105 transition duration-500"
-                />
-              </div>
-            </div>
-
-            {/* Slider Dots */}
-            {banners.length > 1 && (
-              <div className="absolute bottom-4 left-8 flex items-center gap-1.5 z-20">
-                {banners.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentBannerIdx(idx)}
-                    className={`h-2 rounded-full transition-all ${
-                      currentBannerIdx === idx ? 'w-6 bg-[#00B074]' : 'w-2 bg-slate-300'
-                    }`}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
-
-        {/* 2. FEATURED CATEGORIES RAIL */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Featured Categories</h2>
-              <p className="text-xs text-slate-500 font-medium">Explore hand-picked fresh groceries</p>
+              <p className="text-[9px] text-[var(--app-text-muted)] font-semibold uppercase leading-none">Delivering To</p>
+              <p className="text-[11px] font-bold text-[var(--app-text-primary)] leading-tight mt-0.5 truncate max-w-[200px] sm:max-w-none">
+                {selectedLocation?.title || 'Gandhi Nagar, Basti, UP'}
+              </p>
             </div>
-            <Link to="/shop" className="text-xs font-bold text-[#00B074] hover:underline flex items-center gap-1">
-              <span>View All Categories</span>
-              <ChevronRight size={14} />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsLocationModalOpen(true)}
+            className="text-[10px] font-bold text-[#635BFF] dark:text-[#7C71FF] hover:underline"
+          >
+            Change
+          </button>
+        </div>
+
+        {/* Categories Rail */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[11px] font-black uppercase tracking-wider text-[var(--app-text-muted)]">
+              Categories
+            </h2>
+            <Link to="/shop" className="text-[10px] font-bold text-[#635BFF] flex items-center gap-0.5 hover:underline">
+              <span>All</span>
+              <ChevronRight size={12} />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
-            {CATEGORIES_DATA.map((cat, idx) => (
+          <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+            {CATEGORIES.map((cat, idx) => (
               <Link
                 key={idx}
                 to={`/shop?category=${cat.slug}`}
-                className="bg-white p-4 rounded-3xl border border-slate-100 hover:border-emerald-300 hover:shadow-md transition text-center group flex flex-col items-center justify-center space-y-2"
+                className="bg-[var(--app-card)] p-1.5 sm:p-2 rounded-xl border border-black/[0.04] dark:border-white/[0.06] hover:border-[#635BFF]/30 transition text-center flex flex-col items-center justify-center gap-1 group"
               >
                 <div 
                   style={{ backgroundColor: cat.color }}
-                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition duration-300 shadow-xs"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-sm sm:text-base group-hover:scale-105 transition duration-200"
                 >
                   {cat.icon}
                 </div>
-                <h3 className="text-xs font-black text-slate-900 group-hover:text-[#00B074] transition">
+                <span className="text-[10px] font-semibold text-[var(--app-text-primary)] group-hover:text-[#635BFF] transition leading-tight truncate w-full text-center">
                   {cat.name}
-                </h3>
-                <span className="text-[10px] text-slate-400 font-medium">{cat.count}</span>
+                </span>
               </Link>
             ))}
           </div>
         </section>
 
-        {/* 3. BEST SELLERS & TRENDING PRODUCTS */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
+        {/* Daily Essentials */}
+        <section className="space-y-2">
+          <div className="flex items-center justify-between">
             <div>
-              <span className="text-xs font-black text-amber-600 uppercase tracking-wider flex items-center gap-1">
-                <Flame size={14} />
-                <span>Trending Now</span>
-              </span>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">Best Sellers</h2>
+              <h2 className="text-xs font-black text-[var(--app-text-primary)] tracking-tight">
+                Daily Essentials
+              </h2>
+              <p className="text-[10px] text-[var(--app-text-muted)]">Dairy, flours & staples</p>
             </div>
-            <Link to="/shop" className="text-xs font-bold text-[#00B074] hover:underline flex items-center gap-1">
-              <span>Explore Shop</span>
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-            {bestSellers.map((product) => {
-              const primaryVariant = (product.variants && product.variants[0]) || { price: product.basePrice };
-              return (
-                <div
-                  key={product._id}
-                  onClick={() => navigate(`/product/${product.slug || product._id}`)}
-                  className="bg-white p-4 rounded-3xl border border-slate-100 shadow-xs hover:shadow-lg hover:border-emerald-200 transition cursor-pointer flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Thumbnail Image */}
-                    <div className="w-full h-44 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden mb-3 relative">
-                      {product.images && product.images[0] ? (
-                        <img
-                          src={product.images[0].imageUrl}
-                          alt={product.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                      ) : (
-                        <span className="text-4xl">🛒</span>
-                      )}
-                      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-[#00B074] text-white text-[9px] font-black rounded-full uppercase">
-                        Fresh
-                      </span>
-                    </div>
-
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      {product.brand || product.categoryName || 'FreshCart'}
-                    </span>
-                    <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mt-0.5 group-hover:text-[#00B074] transition">
-                      {product.title}
-                    </h4>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
-                    <div>
-                      <span className="text-xs text-slate-400 line-through mr-1.5">
-                        ₹{(primaryVariant.price * 1.25).toFixed(0)}
-                      </span>
-                      <span className="text-sm font-black text-slate-900">
-                        ₹{primaryVariant.price}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleQuickAdd(e, product)}
-                      className="w-8 h-8 rounded-xl bg-[#E8F8F0] hover:bg-[#00B074] text-[#00B074] hover:text-white flex items-center justify-center font-black transition active:scale-95 shadow-xs"
-                      title="Add to Cart"
-                    >
-                      <Plus size={16} strokeWidth={3} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 4. DEALS OF THE DAY / OFFERS STRIP */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-emerald-800 via-[#00B074] to-teal-700 rounded-3xl p-8 text-white shadow-xl flex flex-col md:flex-row items-center justify-between gap-6">
-            <div className="space-y-2">
-              <span className="px-3 py-1 bg-white/20 rounded-full text-xs font-black uppercase tracking-wider">
-                ⚡ Flash Sale: Ends Tonight
-              </span>
-              <h3 className="text-2xl sm:text-3xl font-black">Pantry Stock-Up: Save Flat ₹100</h3>
-              <p className="text-xs sm:text-sm text-emerald-100 max-w-lg">
-                Use promo code <strong className="text-white underline">MEGA100</strong> on cart values above ₹999. Free delivery guaranteed on all fresh vegetables and daily dairy.
-              </p>
-            </div>
-            <Link
-              to="/shop"
-              className="px-6 py-3 bg-white text-[#00B074] hover:bg-emerald-50 rounded-2xl text-xs font-black transition shrink-0 shadow-md"
-            >
-              Shop Deals Now →
-            </Link>
-          </div>
-        </section>
-
-        {/* 5. NEW ARRIVALS */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <span className="text-xs font-black text-[#00B074] uppercase tracking-wider">Direct From Mill</span>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight mt-0.5">New Arrivals</h2>
-            </div>
-            <Link to="/shop" className="text-xs font-bold text-[#00B074] hover:underline flex items-center gap-1">
+            <Link to="/shop" className="text-[10px] font-bold text-[#635BFF] flex items-center gap-0.5 hover:underline">
               <span>See More</span>
-              <ChevronRight size={14} />
+              <ChevronRight size={12} />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
-            {newArrivals.map((product) => {
-              const primaryVariant = (product.variants && product.variants[0]) || { price: product.basePrice };
-              return (
-                <div
-                  key={product._id}
-                  onClick={() => navigate(`/product/${product.slug || product._id}`)}
-                  className="bg-white p-4 rounded-3xl border border-slate-100 shadow-xs hover:shadow-lg hover:border-emerald-200 transition cursor-pointer flex flex-col justify-between group"
-                >
-                  <div>
-                    <div className="w-full h-44 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden mb-3 relative">
-                      {product.images && product.images[0] ? (
-                        <img
-                          src={product.images[0].imageUrl}
-                          alt={product.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        />
-                      ) : (
-                        <span className="text-4xl">🌾</span>
-                      )}
-                      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full uppercase">
-                        New
-                      </span>
-                    </div>
-
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      {product.brand || 'Pure Harvest'}
-                    </span>
-                    <h4 className="text-xs font-bold text-slate-900 line-clamp-2 mt-0.5 group-hover:text-[#00B074] transition">
-                      {product.title}
-                    </h4>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
-                    <span className="text-sm font-black text-slate-900">₹{primaryVariant.price}</span>
-                    <button
-                      type="button"
-                      onClick={(e) => handleQuickAdd(e, product)}
-                      className="w-8 h-8 rounded-xl bg-[#E8F8F0] hover:bg-[#00B074] text-[#00B074] hover:text-white flex items-center justify-center font-black transition active:scale-95 shadow-xs"
-                      title="Add to Cart"
-                    >
-                      <Plus size={16} strokeWidth={3} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="h-44 bg-black/[0.03] dark:bg-white/[0.05] rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              {dailyPicks.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
         </section>
 
-        {/* 6. CUSTOMER TESTIMONIALS */}
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-xl mx-auto mb-8">
-            <span className="text-xs font-black text-[#00B074] uppercase tracking-wider">Trusted by 8,000+ Households</span>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight mt-1">What Our Customers Say</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, idx) => (
-              <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-1 text-amber-400">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <Star key={i} size={15} fill="currentColor" />
-                    ))}
-                  </div>
-                  <p className="text-xs text-slate-600 leading-relaxed italic">
-                    "{t.text}"
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-3 pt-4 border-t border-slate-100 mt-4">
-                  <div className="w-10 h-10 rounded-2xl bg-[#E8F8F0] text-[#00B074] flex items-center justify-center font-black text-xs">
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-bold text-slate-900">{t.name}</h5>
-                    <p className="text-[10px] text-slate-400">{t.location}</p>
-                  </div>
-                </div>
+        {/* Pantry Staples */}
+        {pantryStaples.length > 0 && (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xs font-black text-[var(--app-text-primary)] tracking-tight">
+                  Pantry Staples
+                </h2>
+                <p className="text-[10px] text-[var(--app-text-muted)]">Oils, rice & packaged goods</p>
               </div>
-            ))}
-          </div>
-        </section>
+              <Link to="/shop" className="text-[10px] font-bold text-[#635BFF] flex items-center gap-0.5 hover:underline">
+                <span>Explore</span>
+                <ChevronRight size={12} />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+              {pantryStaples.map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
 
       </main>
 
-      {/* Cart Slide-Over Drawer */}
+      {/* Small Minimal Footer */}
+      <FreshCartFooter />
+
+      {/* Cart Drawer & Checkout Modal */}
       <CartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -461,15 +199,16 @@ const Home = () => {
           setIsCheckoutOpen(true);
         }}
       />
-
-      {/* Checkout Modal */}
       <CheckoutModal
         isOpen={isCheckoutOpen}
         onClose={() => setIsCheckoutOpen(false)}
       />
 
-      {/* FreshCart Footer */}
-      <FreshCartFooter />
+      {/* Location Picker Modal (Defaults to Basti) */}
+      <LocationPickerModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+      />
 
     </div>
   );

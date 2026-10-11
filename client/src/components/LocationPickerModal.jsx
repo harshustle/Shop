@@ -17,26 +17,16 @@ import {
 import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
 
-// Quick commerce operational hubs (Kushinagar, UP)
+// Quick commerce operational hub (Basti, UP)
 const SERVICE_AREAS = {
-  'TAMKUHI RAJ': {
-    name: 'TAMKUHI RAJ',
-    title: 'NH28',
-    subtitle: 'NH28, TAMKUHI RAJ, KUSHINAGAR, UTTAR PRADESH, 274407',
-    lat: 26.6924,
-    lng: 84.2868,
-    postalCode: '274407',
-    city: 'Tamkuhi Raj',
-    state: 'Uttar Pradesh'
-  },
-  'SEWARAHI': {
-    name: 'SEWARAHI',
-    title: 'Station Road',
-    subtitle: 'STATION ROAD, SEWARAHI, KUSHINAGAR, UTTAR PRADESH, 274406',
-    lat: 26.7820,
-    lng: 84.3410,
-    postalCode: '274406',
-    city: 'Sewarahi',
+  'BASTI': {
+    name: 'BASTI',
+    title: 'Gandhi Nagar',
+    subtitle: 'Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001',
+    lat: 26.8028,
+    lng: 82.7634,
+    postalCode: '272001',
+    city: 'Basti',
     state: 'Uttar Pradesh'
   }
 };
@@ -47,26 +37,21 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
   // Multi-Step State: 'location' (Step 1 of 2) | 'details' (Step 2 of 2)
   const [step, setStep] = useState('location');
 
-  // Active Area Selection ('TAMKUHI RAJ' | 'SEWARAHI')
-  const [activeArea, setActiveArea] = useState(() => {
-    if (selectedLocation?.city?.toLowerCase().includes('sewarahi') || selectedLocation?.address?.toUpperCase().includes('SEWARAHI')) {
-      return 'SEWARAHI';
-    }
-    return 'TAMKUHI RAJ';
-  });
+  // Active Area Selection ('BASTI')
+  const [activeArea, setActiveArea] = useState('BASTI');
 
   // Current display data for map / area
   const [currentCoords, setCurrentCoords] = useState({
-    lat: selectedLocation?.lat || SERVICE_AREAS['TAMKUHI RAJ'].lat,
-    lng: selectedLocation?.lng || SERVICE_AREAS['TAMKUHI RAJ'].lng
+    lat: selectedLocation?.lat || SERVICE_AREAS['BASTI'].lat,
+    lng: selectedLocation?.lng || SERVICE_AREAS['BASTI'].lng
   });
 
   const [currentTitle, setCurrentTitle] = useState(() => {
-    return selectedLocation?.title || (selectedLocation?.address ? selectedLocation.address.split(',')[0] : SERVICE_AREAS['TAMKUHI RAJ'].title);
+    return selectedLocation?.title || (selectedLocation?.address ? selectedLocation.address.split(',')[0] : SERVICE_AREAS['BASTI'].title);
   });
 
   const [currentSubtitle, setCurrentSubtitle] = useState(() => {
-    return selectedLocation?.address || SERVICE_AREAS['TAMKUHI RAJ'].subtitle;
+    return selectedLocation?.address || SERVICE_AREAS['BASTI'].subtitle;
   });
 
   const [isLocating, setIsLocating] = useState(false);
@@ -230,7 +215,7 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
 
         if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
         debounceTimerRef.current = setTimeout(() => {
-          const areaObj = SERVICE_AREAS[activeArea] || SERVICE_AREAS['TAMKUHI RAJ'];
+          const areaObj = SERVICE_AREAS[activeArea] || SERVICE_AREAS['BASTI'];
           reverseGeocode(newLat, newLng, areaObj);
         }, 500);
       });
@@ -321,7 +306,7 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
       },
       () => {
         setIsLocating(false);
-        const target = SERVICE_AREAS[activeArea] || SERVICE_AREAS['TAMKUHI RAJ'];
+        const target = SERVICE_AREAS[activeArea] || SERVICE_AREAS['BASTI'];
         if (mapInstanceRef.current) {
           mapInstanceRef.current.flyTo([target.lat, target.lng], 16);
         }
@@ -330,14 +315,34 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
     );
   };
 
-  // Step 1: Confirm Location on Map -> Advance to Step 2 (Delivery Details)
+  // Step 1: Confirm Location on Map -> Instantly save Basti location and close
   const handleProceedToDetails = () => {
-    if (!isDeliverable) {
-      setErrorMessage('Selected location is outside our active delivery polygon. Please pan the map inside the green service zone.');
-      return;
-    }
-    setErrorMessage('');
-    setStep('details');
+    const areaObj = SERVICE_AREAS['BASTI'];
+    const fullDeliveryLocation = {
+      tag: 'Home',
+      title: currentTitle || areaObj.title,
+      address: currentSubtitle || areaObj.subtitle,
+      streetAddress: currentSubtitle || areaObj.subtitle,
+      flatNumber: flatDetails || 'Near Company Bagh',
+      landmark: 'Company Bagh',
+      recipientName: recipientName || localStorage.getItem('fullName') || 'Customer',
+      recipientPhone: contactNumber || localStorage.getItem('userPhone') || '',
+      lat: currentCoords.lat,
+      lng: currentCoords.lng,
+      city: areaObj.city,
+      state: areaObj.state,
+      postalCode: areaObj.postalCode,
+      isDeliverable: true,
+      distanceKm: distanceKm || 0.5,
+      etaMinutes: 10
+    };
+
+    setLocation(fullDeliveryLocation);
+    localStorage.setItem('freshcart_selected_location', JSON.stringify(fullDeliveryLocation));
+    sessionStorage.setItem('freshcart_location_confirmed', 'true');
+    window.dispatchEvent(new CustomEvent('freshcart-location-updated', { detail: fullDeliveryLocation }));
+    window.dispatchEvent(new Event('storage'));
+    onClose();
   };
 
   // Step 2: Save Delivery Details and finalize location
@@ -412,38 +417,17 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
         {step === 'location' && (
           <div className="relative flex-1 w-full h-full flex flex-col">
             
-            {/* Top Area Switcher (TAMKUHI RAJ | SEWARAHI) */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[400] flex items-center bg-white/95 backdrop-blur-md rounded-2xl p-1.5 shadow-xl border border-slate-200/80">
-              <button
-                type="button"
-                onClick={() => handleSelectArea('TAMKUHI RAJ')}
-                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition ${
-                  activeArea === 'TAMKUHI RAJ'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                TAMKUHI RAJ
-              </button>
-              <div className="w-[1px] h-4 bg-slate-200 mx-0.5" />
-              <button
-                type="button"
-                onClick={() => handleSelectArea('SEWARAHI')}
-                className={`px-4 sm:px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition ${
-                  activeArea === 'SEWARAHI'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                SEWARAHI
-              </button>
+            {/* Top Clean Pill Badge (Basti, UP) */}
+            <div className="absolute top-4 left-4 z-[400] flex items-center gap-2 bg-white/95 backdrop-blur-md rounded-full px-4 py-2 shadow-lg border border-slate-200/80">
+              <MapPin size={15} className="text-[#635BFF]" />
+              <span className="text-xs font-black text-slate-800 tracking-tight">Basti, Uttar Pradesh</span>
             </div>
 
             {/* Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="absolute top-4 right-4 z-[400] w-9 h-9 rounded-full bg-white/90 backdrop-blur-md text-slate-500 hover:text-slate-800 shadow-lg flex items-center justify-center transition border border-slate-200/60"
+              className="absolute top-4 right-4 z-[400] w-9 h-9 rounded-full bg-white/95 backdrop-blur-md text-slate-500 hover:text-slate-800 shadow-lg flex items-center justify-center transition border border-slate-200/60"
               title="Close"
             >
               <X size={18} />
@@ -456,12 +440,12 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
                 className="w-full h-full z-0"
               />
 
-              {/* Center Red Teardrop Pin Marker */}
+              {/* Center Purple Teardrop Pin Marker */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full z-[300] pointer-events-none flex flex-col items-center select-none">
-                <div className="w-10 h-10 rounded-full bg-[#E11449] border-2 border-white flex items-center justify-center shadow-2xl ring-4 ring-[#E11449]/25">
+                <div className="w-10 h-10 rounded-full bg-[#635BFF] border-2 border-white flex items-center justify-center shadow-2xl ring-4 ring-[#635BFF]/25">
                   <div className="w-3.5 h-3.5 rounded-full bg-white" />
                 </div>
-                <div className="w-1.5 h-3 bg-[#E11449] -mt-0.5 rounded-b-xs" />
+                <div className="w-1.5 h-3 bg-[#635BFF] -mt-0.5 rounded-b-xs" />
                 <div className="w-4 h-1.5 bg-black/30 rounded-full blur-[1.5px] mt-0.5" />
               </div>
 
@@ -472,7 +456,7 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
                 className="absolute bottom-56 sm:bottom-52 right-4 z-[300] w-12 h-12 rounded-full bg-white text-slate-800 shadow-2xl border border-slate-200/80 flex items-center justify-center hover:bg-slate-50 active:scale-95 transition"
                 title="Locate Current Position"
               >
-                <Crosshair size={22} className={`stroke-[2.2] ${isLocating ? 'animate-spin text-[#E11449]' : 'text-slate-800'}`} />
+                <Crosshair size={22} className={`stroke-[2.2] ${isLocating ? 'animate-spin text-[#635BFF]' : 'text-slate-800'}`} />
               </button>
             </div>
 
@@ -480,9 +464,9 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
             <div className="relative z-[400] bg-white rounded-t-[32px] sm:rounded-3xl p-6 sm:p-7 shadow-[0_-10px_35px_rgba(0,0,0,0.12)] border-t border-slate-100 space-y-4">
               <div className="flex items-center justify-between">
                 <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-wider ${
-                  isDeliverable ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                  isDeliverable ? 'bg-[#EFEBFF] text-[#635BFF]' : 'bg-rose-50 text-rose-700'
                 }`}>
-                  <span className={`w-2 h-2 rounded-full ${isDeliverable ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} />
+                  <span className={`w-2 h-2 rounded-full ${isDeliverable ? 'bg-[#635BFF] animate-pulse' : 'bg-rose-500'}`} />
                   <span>{isDeliverable ? 'SERVICEABLE AREA' : 'OUT OF DELIVERY ZONE'}</span>
                 </div>
 
@@ -496,15 +480,15 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
               {!isDeliverable && (
                 <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl text-xs font-bold text-rose-800 flex items-start gap-2">
                   <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
-                  <span>Hum sirf marked green polygon boundary ke andar delivery karte hain. Kripya map ko delivery zone ke andar drag karein.</span>
+                  <span>Kripya map ko Basti delivery zone ke andar select karein.</span>
                 </div>
               )}
 
               <div className="space-y-1">
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-tight">
                   {currentTitle}
                 </h3>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide truncate block">
+                <p className="text-xs font-medium text-slate-400 uppercase tracking-wide truncate block">
                   {isResolving ? 'Resolving street address...' : currentSubtitle}
                 </p>
               </div>
@@ -513,14 +497,14 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
                 type="button"
                 disabled={!isDeliverable}
                 onClick={handleProceedToDetails}
-                className={`w-full py-4 rounded-2xl text-base font-black tracking-wide transition flex items-center justify-center gap-2 ${
+                className={`w-full py-3.5 rounded-full text-sm font-black tracking-wide transition flex items-center justify-center gap-2 ${
                   isDeliverable
-                    ? 'bg-[#E11449] hover:bg-[#c90f3e] text-white shadow-xl shadow-[#E11449]/30 active:scale-[0.98]'
+                    ? 'bg-[#635BFF] hover:bg-[#5248EE] text-white shadow-xl shadow-[#635BFF]/30 active:scale-[0.98]'
                     : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                 }`}
               >
                 <span>{isDeliverable ? 'Confirm Location' : 'Location Not Deliverable'}</span>
-                {isDeliverable && <ArrowRight size={20} className="stroke-[2.5]" />}
+                {isDeliverable && <ArrowRight size={18} className="stroke-[2.5]" />}
               </button>
             </div>
 
@@ -663,10 +647,10 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={handleSaveAndContinue}
-                className="w-full py-4 bg-[#E55A7E] hover:bg-[#d84a70] text-white rounded-full text-base font-black tracking-wide transition flex items-center justify-center gap-2 shadow-lg shadow-[#E55A7E]/30 active:scale-[0.98]"
+                className="w-full py-3.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-sm font-black tracking-wide transition flex items-center justify-center gap-2 shadow-lg shadow-[#635BFF]/30 active:scale-[0.98]"
               >
                 <span>Save & Continue</span>
-                <ArrowRight size={20} className="stroke-[2.5]" />
+                <ArrowRight size={18} className="stroke-[2.5]" />
               </button>
 
             </div>

@@ -91,7 +91,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
         <button
           type="button"
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl text-xs font-black transition flex items-center gap-1.5 shadow-sm self-start sm:self-center"
+          className="px-5 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-black transition flex items-center gap-1.5 shadow-md shadow-[#635BFF]/25 self-start sm:self-center"
         >
           <Plus size={14} />
           <span>Add New Address</span>
@@ -101,7 +101,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
       {/* Addresses Grid */}
       {addresses.length === 0 ? (
         <div className="text-center py-16 px-4 bg-slate-50/70 rounded-3xl border border-dashed border-slate-200 space-y-3">
-          <div className="w-14 h-14 rounded-2xl bg-orange-50 text-orange-500 flex items-center justify-center mx-auto">
+          <div className="w-14 h-14 rounded-2xl bg-[#EFEBFF] text-[#635BFF] flex items-center justify-center mx-auto">
             <MapPin size={28} />
           </div>
           <h3 className="text-base font-bold text-slate-800">No addresses saved</h3>
@@ -111,7 +111,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="px-5 py-2.5 bg-[#00B074] text-white rounded-2xl text-xs font-bold transition shadow-sm"
+            className="px-6 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-bold transition shadow-sm"
           >
             Add Address
           </button>
@@ -123,7 +123,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
               key={addr._id}
               className={`p-5 rounded-2xl border transition relative flex flex-col justify-between space-y-3 ${
                 addr.isDefault 
-                  ? 'border-[#00B074] bg-emerald-50/20 shadow-xs' 
+                  ? 'border-[#635BFF] bg-[#EFEBFF]/20 shadow-xs' 
                   : 'border-slate-200/80 bg-white hover:border-slate-300'
               }`}
             >
@@ -137,7 +137,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                   </div>
 
                   {addr.isDefault && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] flex items-center gap-1">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#EFEBFF] text-[#635BFF] font-bold text-[10px] flex items-center gap-1">
                       <CheckCircle2 size={11} />
                       <span>Default</span>
                     </span>
@@ -191,7 +191,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                     onClick={() => setForm({ ...form, label: lbl })}
                     className={`py-2 rounded-xl text-xs font-bold transition border ${
                       form.label === lbl 
-                        ? 'bg-[#00B074] text-white border-[#00B074]' 
+                        ? 'bg-[#635BFF] text-white border-[#635BFF]' 
                         : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
                     }`}
                   >
@@ -209,7 +209,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                     value={form.fullName}
                     onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                     placeholder="e.g. Ramesh Kumar"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                   />
                 </div>
 
@@ -221,7 +221,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                     value={form.phoneNumber}
                     onChange={(e) => setForm({ ...form, phoneNumber: e.target.value })}
                     placeholder="10-digit mobile"
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                   />
                 </div>
               </div>
@@ -233,7 +233,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                   value={form.apartment}
                   onChange={(e) => setForm({ ...form, apartment: e.target.value })}
                   placeholder="Flat 402, Lotus Tower"
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                 />
               </div>
 
@@ -245,7 +245,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                   value={form.streetAddress}
                   onChange={(e) => setForm({ ...form, streetAddress: e.target.value })}
                   placeholder="Main Road, Near Metro Station"
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                 />
               </div>
 
@@ -257,7 +257,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                     required
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                   />
                 </div>
 
@@ -268,7 +268,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                     required
                     value={form.postalCode}
                     onChange={(e) => setForm({ ...form, postalCode: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#00B074]/30 focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#635BFF]/30 focus:outline-none"
                   />
                 </div>
               </div>
@@ -279,7 +279,7 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                   id="isDefaultCheck"
                   checked={form.isDefault}
                   onChange={(e) => setForm({ ...form, isDefault: e.target.checked })}
-                  className="w-4 h-4 text-[#00B074] rounded-md border-slate-300 focus:ring-[#00B074]"
+                  className="w-4 h-4 text-[#635BFF] rounded-md border-slate-300 focus:ring-[#635BFF]"
                 />
                 <label htmlFor="isDefaultCheck" className="text-xs font-bold text-slate-700 cursor-pointer">
                   Make this my default delivery address
@@ -290,14 +290,14 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition"
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-full transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 bg-[#00B074] hover:bg-[#009663] text-white rounded-xl text-xs font-black transition shadow-sm disabled:opacity-50"
+                  className="px-6 py-2 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-black transition shadow-md shadow-[#635BFF]/25 disabled:opacity-50"
                 >
                   {isSubmitting ? 'Saving...' : 'Save Address'}
                 </button>

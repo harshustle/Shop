@@ -61,7 +61,7 @@ const OrdersTab = ({ orders = [] }) => {
           </p>
           <Link
             to="/shop"
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#00B074] hover:bg-[#009663] text-white rounded-2xl text-xs font-black transition shadow-sm"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full text-xs font-black transition shadow-md shadow-[#635BFF]/25"
           >
             <span>Start Shopping</span>
             <ArrowRight size={14} />
@@ -144,7 +144,7 @@ const OrdersTab = ({ orders = [] }) => {
                   </span>
                   <Link
                     to={`/track-order?id=${ord._id || ord.orderNumber}`}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-[#00B074] hover:text-white text-slate-700 rounded-xl text-xs font-bold transition"
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#EFEBFF] hover:bg-[#635BFF] text-[#635BFF] hover:text-white rounded-full text-xs font-bold transition"
                   >
                     <span>Track Order</span>
                     <ExternalLink size={12} />
