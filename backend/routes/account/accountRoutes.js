@@ -11,7 +11,9 @@ const {
     setUserLocation,
     getWallet,
     addWalletMoney,
-    submitFeedback
+    submitFeedback,
+    deleteAccountAndData,
+    updateCommunicationPreferences
 } = require('../../controllers/account/accountController');
 
 router.use(auth);
@@ -26,6 +28,8 @@ router.put('/location', setUserLocation);
 router.get('/wallet', getWallet);
 router.post('/wallet/add', addWalletMoney);
 router.post('/feedback', submitFeedback);
+router.delete('/delete-me', deleteAccountAndData);
+router.put('/communication-preferences', updateCommunicationPreferences);
 
 module.exports = router;
 

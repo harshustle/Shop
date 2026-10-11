@@ -385,6 +385,75 @@ const submitFeedback = async (req, res) => {
     }
 };
 
+/**
+ * Requirement 20: Account & Data Deletion Mechanism (GDPR, CCPA & DPDP Act compliance)
+ * DELETE /api/account/delete-me
+ */
+const deleteAccountAndData = async (req, res) => {
+    try {
+        const userId = req.userId;
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User account not found' });
+        }
+
+        // 1. Purge user addresses
+        await Address.deleteMany({ user: userId });
+
+        // 2. Purge user wishlist
+        await Wishlist.deleteMany({ user: userId });
+
+        // 3. Clear cached profile
+        try {
+            await RedisService.del(`user:profile:${userId}`);
+        } catch (e) {
+            // non-fatal cache clear error
+        }
+
+        // 4. Delete user record completely
+        await User.findByIdAndDelete(userId);
+
+        res.json({
+            success: true,
+            message: 'Your account and all associated personal data have been permanently deleted in accordance with data protection regulations.'
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Data deletion error: ' + error.message });
+    }
+};
+
+/**
+ * Requirement 18: Communication Preferences & Unsubscribe Mechanism
+ * PUT /api/account/communication-preferences
+ */
+const updateCommunicationPreferences = async (req, res) => {
+    try {
+        const { marketingEmails, marketingSms, orderUpdates } = req.body;
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        if (!user.metadata) user.metadata = {};
+        user.metadata.communicationPreferences = {
+            marketingEmails: Boolean(marketingEmails),
+            marketingSms: Boolean(marketingSms),
+            orderUpdates: orderUpdates !== undefined ? Boolean(orderUpdates) : true,
+            updatedAt: new Date()
+        };
+        user.markModified('metadata');
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Communication preferences updated successfully.',
+            preferences: user.metadata.communicationPreferences
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 module.exports = {
     getAccountDetails,
     updateProfile,
@@ -395,6 +464,8 @@ module.exports = {
     setUserLocation,
     getWallet,
     addWalletMoney,
-    submitFeedback
+    submitFeedback,
+    deleteAccountAndData,
+    updateCommunicationPreferences
 };
 

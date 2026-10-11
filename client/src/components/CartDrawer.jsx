@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { 
   X, 
   Plus, 
@@ -303,6 +304,12 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
                   <ArrowRight size={16} />
                 </div>
               </button>
+              {/* Requirement 6 & 10: Legal Consent & GST Transparency */}
+              <p className="text-[10px] text-center text-slate-500 mt-2 font-medium">
+                By placing your order, you agree to our{' '}
+                <Link to="/terms" onClick={onClose} className="text-[#635BFF] underline font-semibold">Terms</Link> and{' '}
+                <Link to="/refunds" onClick={onClose} className="text-[#635BFF] underline font-semibold">Refund Policy</Link>. All prices include GST.
+              </p>
             </div>
           )}
 

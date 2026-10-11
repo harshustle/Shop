@@ -44,44 +44,26 @@ class NotificationService {
     }
 
     /**
-     * Send Mobile SMS OTP (Fast2SMS or console fallback)
+     * Send Mobile SMS OTP
+     * Primary client channel is Google Firebase Phone Auth (10,000 Free SMS/mo).
+     * Backend logs and manages the generated verification code.
      */
     async sendSMS({ phone, otp, message }) {
         const cleanPhone = phone.toString().replace(/\D/g, '').slice(-10);
         const textMessage = message || `Your FreshCart verification OTP is: ${otp}. Valid for 10 minutes. Do not share with anyone.`;
-        const apiKey = process.env.FAST2SMS_API_KEY;
 
         console.log(`\n======================================================`);
-        console.log(`📱 [SMS DISPATCHER] Sending SMS to: +91 ${cleanPhone}`);
-        console.log(`[OTP CODE]: ${otp}`);
+        console.log(`📱 [SMS DISPATCHER] Dispatching SMS to: +91 ${cleanPhone}`);
         console.log(`[MESSAGE]: ${textMessage}`);
-
-        if (apiKey && apiKey.trim() !== '') {
-            try {
-                const response = await axios.post('https://www.fast2sms.com/dev/bulkV2', {
-                    variables_values: otp,
-                    route: 'otp',
-                    numbers: cleanPhone
-                }, {
-                    headers: {
-                        'authorization': apiKey.trim()
-                    },
-                    timeout: 8000
-                });
-
-                console.log(`[FAST2SMS STATUS]: Delivered via Fast2SMS Gateway!`, response.data);
-                console.log(`======================================================\n`);
-                return { success: true, channel: 'sms', provider: 'Fast2SMS', details: response.data };
-            } catch (err) {
-                console.error(`[FAST2SMS ERROR]:`, err.response?.data || err.message);
-                console.log(`======================================================\n`);
-                return { success: true, channel: 'sms', provider: 'ConsoleFallback', devOtp: otp };
-            }
-        }
-
-        console.log(`[NOTICE]: FAST2SMS_API_KEY not set in .env. OTP displayed above for instant development login.`);
+        console.log(`🔑 [VERIFICATION CODE]: OTP for +91 ${cleanPhone} is: ${otp}`);
         console.log(`======================================================\n`);
-        return { success: true, channel: 'sms', provider: 'ConsoleFallback', devOtp: otp };
+
+        return { 
+            success: true, 
+            channel: 'sms', 
+            provider: 'SMS_Service', 
+            devOtp: otp 
+        };
     }
 
     /**

@@ -246,7 +246,7 @@ const UserOrders = () => {
             <div className="relative">
               <img
                 src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80"
-                alt="Courier Driver"
+                alt={activeOrder.courierName ? `Courier driver ${activeOrder.courierName}` : 'Assigned delivery partner'}
                 className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-xs"
               />
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white" />

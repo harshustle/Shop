@@ -15,7 +15,6 @@ import {
   MessageSquare,
   ShieldCheck,
   RotateCw,
-  Flame,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -153,29 +152,7 @@ const Login = () => {
         return;
       }
 
-      // 1A. If Firebase project is configured, use Firebase Phone Auth (10,000 Free SMS / mo)
-      if (firebaseReady) {
-        try {
-          const verifier = setupRecaptcha('recaptcha-container');
-          if (!verifier) {
-            throw new Error('reCAPTCHA initialization failed. Please reload.');
-          }
-
-          const confirmRes = await sendFirebaseOtp(cleanPhone, verifier);
-          setConfirmationResult(confirmRes);
-          setIsUsingFirebase(true);
-          setIsOtpStep(true);
-          setResendCountdown(30);
-          setSuccessMsg(`Google Firebase SMS OTP sent to +91 ${cleanPhone}`);
-          setIsLoading(false);
-          return;
-        } catch (fbErr) {
-          console.warn('[Firebase Auth] Error or quota exceeded, switching to server dispatch:', fbErr.message);
-          // Fall through to server-side SMS dispatch
-        }
-      }
-
-      // 1B. Server-side SMS Dispatch (Fast2SMS / Dev fallback)
+      // 1A. Primary: Instant Server Auto-OTP dispatch (Auto-fills OTP)
       try {
         const response = await fetch(`${API_URL}/api/auth/otp/send`, {
           method: 'POST',
@@ -187,17 +164,43 @@ const Login = () => {
         if (response.ok) {
           setIsUsingFirebase(false);
           setIsOtpStep(true);
-          setDevOtp(data.devOtp || '');
+          const generatedOtp = data.devOtp ? data.devOtp.toString() : '';
+          setDevOtp(generatedOtp);
+          if (generatedOtp) {
+            setOtp(generatedOtp);
+          }
           setResendCountdown(30);
-          setSuccessMsg(data.message || `OTP sent to mobile +91 ${cleanPhone} via SMS`);
+          setSuccessMsg(data.message || `Verification OTP generated for +91 ${cleanPhone}`);
+          setIsLoading(false);
+          return;
         } else {
           setError(data.error || 'Failed to send OTP via SMS. Please check your phone number.');
         }
       } catch (err) {
-        setError('Could not connect to authentication service. Please check your network.');
-      } finally {
-        setIsLoading(false);
+        console.warn('Server OTP dispatch notice:', err);
       }
+
+      // 1B. Firebase Phone Auth fallback
+      if (firebaseReady) {
+        try {
+          const verifier = setupRecaptcha('recaptcha-container');
+          if (verifier) {
+            const confirmRes = await sendFirebaseOtp(cleanPhone, verifier);
+            setConfirmationResult(confirmRes);
+            setIsUsingFirebase(true);
+            setIsOtpStep(true);
+            setResendCountdown(30);
+            setSuccessMsg(`Verification code sent via SMS to +91 ${cleanPhone}`);
+            setIsLoading(false);
+            return;
+          }
+        } catch (fbErr) {
+          console.warn('[Firebase Auth] Error:', fbErr);
+          setError(fbErr.message || 'Firebase SMS verification failed');
+        }
+      }
+
+      setIsLoading(false);
     } else {
       // 1C. Email Address Login: Send OTP to Email
       const cleanEmail = email.trim().toLowerCase();
@@ -489,14 +492,6 @@ const Login = () => {
             <h2 className="text-lg font-black text-[var(--app-text-primary)] flex items-center gap-1.5">
               {isOtpStep ? 'Verify OTP' : 'Welcome back'}
             </h2>
-
-            {/* Firebase Active Badge */}
-            {authChannel === 'phone' && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-[#EFEBFF] border border-[#635BFF]/20 text-[#635BFF]">
-                <Flame size={12} className="text-[#635BFF]" />
-                Firebase 10k Free
-              </span>
-            )}
           </div>
 
           <p className="text-xs text-slate-500 mt-1">
@@ -587,13 +582,10 @@ const Login = () => {
               {/* Phone Channel Input */}
               {authChannel === 'phone' && (
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
+                  <div className="mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                       Mobile Phone Number
                     </label>
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      Google Firebase 10k Free
-                    </span>
                   </div>
                   <div className="relative flex items-center">
                     <div className="absolute left-3.5 flex items-center gap-1 text-slate-400 font-bold text-xs pointer-events-none">

@@ -14,12 +14,12 @@ import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'firebase/auth
  * VITE_FIREBASE_APP_ID=...
  */
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCI0AAOeX7Y1_lV3xxCD6atJJ4L-SkKRyk",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "avian-lane-459810-j9.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "avian-lane-459810-j9",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "avian-lane-459810-j9.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "697427190286",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:697427190286:web:cc8ca4e5bd80d2416ed25f"
 };
 
 // Check if valid Firebase project credentials are provided
@@ -54,18 +54,32 @@ export const setupRecaptcha = (containerId = 'recaptcha-container') => {
   if (!auth) return null;
 
   try {
+    const el = document.getElementById(containerId);
     if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
+      try {
+        window.recaptchaVerifier.clear();
+      } catch (e) {
+        // ignore clear error
+      }
       window.recaptchaVerifier = null;
     }
+    if (el) {
+      el.innerHTML = '';
+    }
 
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, el || containerId, {
       size: 'invisible',
       callback: () => {
-        // reCAPTCHA solved - allow signInWithPhoneNumber
+        // reCAPTCHA solved
       },
       'expired-callback': () => {
         console.warn('[Firebase] reCAPTCHA expired, please retry.');
+        if (window.recaptchaVerifier) {
+          try {
+            window.recaptchaVerifier.clear();
+          } catch (e) {}
+          window.recaptchaVerifier = null;
+        }
       }
     });
 

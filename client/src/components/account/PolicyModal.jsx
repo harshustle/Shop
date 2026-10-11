@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Truck, FileText, RotateCcw, Shield, X, CheckCircle2 } from 'lucide-react';
 
 const policyData = {
@@ -143,11 +144,19 @@ const PolicyModal = ({ isOpen, type = 'shipping', onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-end shrink-0">
+        <div className="pt-2 border-t border-slate-100 flex items-center justify-between shrink-0">
+          <Link
+            to={`/${type === 'shipping' ? 'terms' : type}`}
+            onClick={onClose}
+            className="text-xs font-bold text-[#635BFF] hover:underline flex items-center gap-1"
+          >
+            <span>Read Complete Legal Policy</span>
+            <span aria-hidden="true">→</span>
+          </Link>
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 bg-slate-900 hover:bg-[#00B074] text-white rounded-xl text-xs font-bold transition shadow-xs"
+            className="px-5 py-2 bg-slate-900 hover:bg-[#635BFF] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
           >
             I Understand
           </button>

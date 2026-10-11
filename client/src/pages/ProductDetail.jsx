@@ -249,7 +249,11 @@ const ProductDetail = () => {
                       selectedImageIdx === idx ? 'border-[#635BFF] shadow-md' : 'border-slate-100 opacity-60 hover:opacity-100'
                     }`}
                   >
-                    <img src={img.imageUrl} alt="thumbnail" className="w-full h-full object-contain" />
+                    <img 
+                      src={img.imageUrl} 
+                      alt={`${product.title || 'Product'} thumbnail ${idx + 1}`} 
+                      className="w-full h-full object-contain" 
+                    />
                   </button>
                 ))}
               </div>

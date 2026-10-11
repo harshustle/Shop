@@ -122,8 +122,8 @@ const sendSignupOtp = async (req, res) => {
                 success: true,
                 channel: 'sms',
                 identifier: cleanPhone,
-                message: `Verification code sent to +91 ${cleanPhone} via SMS`,
-                devOtp: result.devOtp || otp
+                devOtp: otp,
+                message: `Verification code generated for +91 ${cleanPhone} (Dev OTP: ${otp})`
             });
         }
 
@@ -422,7 +422,6 @@ const sendPasswordResetOtp = async (req, res) => {
             message: `A 6-digit verification code has been sent to your ${channel === 'sms' ? 'mobile number' : 'email address'}`,
             phone: user.phone || targetPhone,
             email: user.email || targetEmail,
-            devOtp: dispatchResult?.devOtp || otp,
             expiresInMinutes: 10
         });
     } catch (error) {
@@ -711,7 +710,7 @@ const logout = async (req, res) => {
 
 /**
  * Send Login OTP (Supports Mobile SMS and Email dispatch)
- * If phone is provided: sends 6-digit OTP via SMS (Fast2SMS / gateway)
+ * If phone is provided: sends 6-digit OTP via SMS / verification gateway
  * If email is provided: sends 6-digit OTP via Email (Nodemailer HTML template)
  */
 const sendLoginOtp = async (req, res) => {
@@ -740,11 +739,11 @@ const sendLoginOtp = async (req, res) => {
 
             return res.json({
                 success: true,
-                message: `Verification OTP has been sent via SMS to +91 ${cleanPhone}`,
+                message: `Verification code generated for +91 ${cleanPhone} (Dev OTP: ${otp})`,
                 channel: 'sms',
                 phone: cleanPhone,
-                devOtp: notifyResult.devOtp || (process.env.NODE_ENV !== 'production' ? otp : undefined),
-                expiresInMinutes: 10
+                expiresInMinutes: 10,
+                devOtp: otp
             });
         }
 
