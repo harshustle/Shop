@@ -8,8 +8,12 @@ const FloatingNavDock = () => {
   const location = useLocation();
   const { itemCount, setIsCartOpen } = useCart();
 
-  // Hide on auth screens
-  if (location.pathname === '/register' || location.pathname === '/login') {
+  // Hide on auth screens and admin dashboard (Admin has its own dedicated mobile navbar)
+  if (
+    location.pathname === '/register' || 
+    location.pathname === '/login' || 
+    location.pathname.startsWith('/admin')
+  ) {
     return null;
   }
 

@@ -73,17 +73,17 @@ const Home = () => {
       <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
 
       {/* Main Content Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 py-3 space-y-4">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 py-4 space-y-6">
 
-        {/* Minimal Location Header Banner */}
-        <div className="bg-[var(--app-card)] rounded-xl px-3 py-2 border border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-full bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center shrink-0">
-              <MapPin size={12} />
+        {/* Location Header Banner */}
+        <div className="bg-[var(--app-card)] rounded-2xl px-4 py-3 border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center shrink-0">
+              <MapPin size={16} />
             </div>
             <div>
-              <p className="text-[9px] text-[var(--app-text-muted)] font-semibold uppercase leading-none">Delivering To</p>
-              <p className="text-[11px] font-bold text-[var(--app-text-primary)] leading-tight mt-0.5 truncate max-w-[200px] sm:max-w-none">
+              <p className="text-[10px] sm:text-xs text-[var(--app-text-muted)] font-black uppercase tracking-wider">Delivering To</p>
+              <p className="text-xs sm:text-sm font-black text-[var(--app-text-primary)] leading-tight mt-0.5 truncate max-w-[210px] sm:max-w-none">
                 {selectedLocation?.title || 'Gandhi Nagar, Basti, UP'}
               </p>
             </div>
@@ -92,38 +92,38 @@ const Home = () => {
           <button
             type="button"
             onClick={() => setIsLocationModalOpen(true)}
-            className="text-[10px] font-bold text-[#635BFF] dark:text-[#7C71FF] hover:underline"
+            className="text-xs sm:text-sm font-bold text-[#635BFF] dark:text-[#7C71FF] px-3 py-1.5 rounded-full bg-[#635BFF]/10 hover:bg-[#635BFF]/15 transition"
           >
             Change
           </button>
         </div>
 
-        {/* Categories Rail */}
-        <section className="space-y-2">
+        {/* Categories Section */}
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-[11px] font-black uppercase tracking-wider text-[var(--app-text-muted)]">
+            <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[var(--app-text-muted)]">
               Categories
             </h2>
-            <Link to="/shop" className="text-[10px] font-bold text-[#635BFF] flex items-center gap-0.5 hover:underline">
+            <Link to="/shop" className="text-xs sm:text-sm font-bold text-[#635BFF] flex items-center gap-1 hover:underline">
               <span>All</span>
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </Link>
           </div>
 
-          <div className="grid grid-cols-6 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-6 gap-2 sm:gap-3">
             {CATEGORIES.map((cat, idx) => (
               <Link
                 key={idx}
                 to={`/shop?category=${cat.slug}`}
-                className="bg-[var(--app-card)] p-1.5 sm:p-2 rounded-xl border border-black/[0.04] dark:border-white/[0.06] hover:border-[#635BFF]/30 transition text-center flex flex-col items-center justify-center gap-1 group"
+                className="bg-[var(--app-card)] p-2 sm:p-3 rounded-2xl border border-black/[0.05] dark:border-white/[0.07] hover:border-[#635BFF]/30 hover:shadow-xs transition text-center flex flex-col items-center justify-center gap-1.5 group"
               >
                 <div 
                   style={{ backgroundColor: cat.color }}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center text-sm sm:text-base group-hover:scale-105 transition duration-200"
+                  className="w-11 h-11 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center text-lg sm:text-2xl group-hover:scale-105 transition duration-200 shadow-2xs"
                 >
                   {cat.icon}
                 </div>
-                <span className="text-[10px] font-semibold text-[var(--app-text-primary)] group-hover:text-[#635BFF] transition leading-tight truncate w-full text-center">
+                <span className="text-[11px] sm:text-xs font-bold text-[var(--app-text-primary)] group-hover:text-[#635BFF] transition leading-tight truncate w-full text-center">
                   {cat.name}
                 </span>
               </Link>
@@ -132,28 +132,28 @@ const Home = () => {
         </section>
 
         {/* Daily Essentials */}
-        <section className="space-y-2">
+        <section className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xs font-black text-[var(--app-text-primary)] tracking-tight">
+              <h2 className="text-sm sm:text-base font-black text-[var(--app-text-primary)] tracking-tight">
                 Daily Essentials
               </h2>
-              <p className="text-[10px] text-[var(--app-text-muted)]">Dairy, flours & staples</p>
+              <p className="text-xs text-[var(--app-text-muted)] mt-0.5">Dairy, flours & staples</p>
             </div>
-            <Link to="/shop" className="text-[10px] font-bold text-[#635BFF] flex items-center gap-0.5 hover:underline">
+            <Link to="/shop" className="text-xs sm:text-sm font-bold text-[#635BFF] flex items-center gap-1 hover:underline">
               <span>See More</span>
-              <ChevronRight size={12} />
+              <ChevronRight size={14} />
             </Link>
           </div>
 
           {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-44 bg-black/[0.03] dark:bg-white/[0.05] rounded-xl animate-pulse" />
+                <div key={i} className="h-56 bg-black/[0.03] dark:bg-white/[0.05] rounded-2xl animate-pulse" />
               ))}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {dailyPicks.map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))}
@@ -163,21 +163,21 @@ const Home = () => {
 
         {/* Pantry Staples */}
         {pantryStaples.length > 0 && (
-          <section className="space-y-2">
+          <section className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xs font-black text-[var(--app-text-primary)] tracking-tight">
+                <h2 className="text-sm sm:text-base font-black text-[var(--app-text-primary)] tracking-tight">
                   Pantry Staples
                 </h2>
-                <p className="text-[10px] text-[var(--app-text-muted)]">Oils, rice & packaged goods</p>
+                <p className="text-xs text-[var(--app-text-muted)] mt-0.5">Oils, rice & packaged goods</p>
               </div>
-              <Link to="/shop" className="text-[10px] font-bold text-[#635BFF] flex items-center gap-0.5 hover:underline">
+              <Link to="/shop" className="text-xs sm:text-sm font-bold text-[#635BFF] flex items-center gap-1 hover:underline">
                 <span>Explore</span>
-                <ChevronRight size={12} />
+                <ChevronRight size={14} />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
               {pantryStaples.map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))}

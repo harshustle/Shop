@@ -3,6 +3,7 @@ const Order = require('../../models/order/Order');
 const Product = require('../../models/catalog/Product');
 const InventoryService = require('../../services/inventory/inventoryService');
 const Category = require('../../models/catalog/Category');
+const RedisService = require('../../services/cache/redisService');
 
 /**
  * Aggregated analytics for FreshCart Super Admin Dashboard
@@ -186,8 +187,54 @@ const getCustomers = async (req, res) => {
 const deleteCustomer = async (req, res) => {
     try {
         const { id } = req.params;
+        const targetUser = await User.findById(id);
+        if (!targetUser) {
+            return res.status(404).json({ error: 'Customer user not found' });
+        }
+        if (targetUser.role === 'admin') {
+            return res.status(400).json({ error: 'Cannot delete Super Admin account' });
+        }
         await User.findByIdAndDelete(id);
-        res.json({ message: 'Customer account removed successfully' });
+
+        // Purge Redis cache & OTP keys
+        await RedisService.del(`user:profile:${id}`);
+        if (targetUser.phone) {
+            await RedisService.del(`otp:signup:phone:${targetUser.phone}`);
+        }
+        if (targetUser.email) {
+            await RedisService.del(`otp:signup:email:${targetUser.email}`);
+        }
+
+        res.json({ message: 'Customer account removed successfully', deletedId: id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * Super Admin customer deletion by phone number
+ */
+const deleteCustomerByPhone = async (req, res) => {
+    try {
+        const { phone } = req.params;
+        const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
+        const targetUser = await User.findOne({ phone: cleanPhone });
+        if (!targetUser) {
+            return res.status(404).json({ error: `Customer with phone +91 ${cleanPhone} not found` });
+        }
+        if (targetUser.role === 'admin') {
+            return res.status(400).json({ error: 'Cannot delete Super Admin account' });
+        }
+        await User.findByIdAndDelete(targetUser._id);
+
+        // Purge Redis cache & OTP keys
+        await RedisService.del(`user:profile:${targetUser._id}`);
+        await RedisService.del(`otp:signup:phone:${cleanPhone}`);
+        if (targetUser.email) {
+            await RedisService.del(`otp:signup:email:${targetUser.email}`);
+        }
+
+        res.json({ message: `Customer account (+91 ${cleanPhone}) removed successfully`, deletedId: targetUser._id });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -230,6 +277,7 @@ module.exports = {
     getAdminMetrics,
     getCustomers,
     deleteCustomer,
+    deleteCustomerByPhone,
     updateAdminProfile
 };
 

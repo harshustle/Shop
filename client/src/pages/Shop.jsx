@@ -15,13 +15,15 @@ import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
 
 const CATEGORY_FILTERS = [
-  { slug: 'all', name: 'All' },
-  { slug: 'dairy-breakfast', name: 'Dairy' },
-  { slug: 'staples-and-grains', name: 'Atta & Flours' },
-  { slug: 'edible-oils', name: 'Oils & Ghee' },
-  { slug: 'packaged-foods-snacks', name: 'Snacks' },
-  { slug: 'organic-vegetables', name: 'Veggies' },
-  { slug: 'fresh-fruits', name: 'Fruits' }
+  { slug: 'all', name: 'All Items' },
+  { slug: 'dairy', name: 'Dairy & Bread' },
+  { slug: 'vegetables', name: 'Vegetables' },
+  { slug: 'fruits', name: 'Fresh Fruits' },
+  { slug: 'atta-rice-dal', name: 'Atta, Rice & Dal' },
+  { slug: 'oil-ghee', name: 'Oils & Ghee' },
+  { slug: 'snacks', name: 'Snacks & Biscuits' },
+  { slug: 'drinks', name: 'Cold Drinks & Tea' },
+  { slug: 'cleaning', name: 'Cleaning & Household' }
 ];
 
 const SORT_OPTIONS = [
@@ -99,9 +101,27 @@ const Shop = () => {
       }
 
       if (selectedCategory !== 'all') {
-        const catSlug = (p.categorySlug || p.categoryName || '').toLowerCase().replace(/\s+/g, '-');
-        if (!catSlug.includes(selectedCategory.toLowerCase())) {
-          return false;
+        const catStr = ((p.categorySlug || '') + ' ' + (p.categoryName || '') + ' ' + (p.title || '') + ' ' + (p.brand || '')).toLowerCase();
+        
+        if (selectedCategory === 'dairy' || selectedCategory === 'dairy-breakfast' || selectedCategory === 'dairy-bread') {
+          if (!catStr.includes('dairy') && !catStr.includes('milk') && !catStr.includes('butter') && !catStr.includes('dahi') && !catStr.includes('bread') && !catStr.includes('curd') && !catStr.includes('paneer') && !catStr.includes('cheese') && !catStr.includes('egg')) return false;
+        } else if (selectedCategory === 'staples-and-grains' || selectedCategory === 'atta-rice-dal' || selectedCategory === 'atta') {
+          if (!catStr.includes('atta') && !catStr.includes('flour') && !catStr.includes('rice') && !catStr.includes('dal') && !catStr.includes('grain') && !catStr.includes('staple') && !catStr.includes('wheat') && !catStr.includes('chana') && !catStr.includes('rajma')) return false;
+        } else if (selectedCategory === 'edible-oils' || selectedCategory === 'oil-ghee' || selectedCategory === 'oil') {
+          if (!catStr.includes('oil') && !catStr.includes('ghee') && !catStr.includes('mustard') && !catStr.includes('sunflower')) return false;
+        } else if (selectedCategory === 'packaged-foods-snacks' || selectedCategory === 'snacks') {
+          if (!catStr.includes('snack') && !catStr.includes('noodle') && !catStr.includes('maggi') && !catStr.includes('chip') && !catStr.includes('lays') && !catStr.includes('bhujia') && !catStr.includes('namkeen') && !catStr.includes('biscuit') && !catStr.includes('cookie') && !catStr.includes('chocolate') && !catStr.includes('silk') && !catStr.includes('kurkure') && !catStr.includes('kitkat') && !catStr.includes('parle')) return false;
+        } else if (selectedCategory === 'organic-vegetables' || selectedCategory === 'vegetables' || selectedCategory === 'veggies') {
+          if (!catStr.includes('vegetable') && !catStr.includes('onion') && !catStr.includes('pyaaz') && !catStr.includes('potato') && !catStr.includes('aloo') && !catStr.includes('tomato') && !catStr.includes('tamatar') && !catStr.includes('chilli') && !catStr.includes('garlic') && !catStr.includes('ginger') && !catStr.includes('lemon') && !catStr.includes('nimbu') && !catStr.includes('coriander') && !catStr.includes('dhaniya') && !catStr.includes('gobhi')) return false;
+        } else if (selectedCategory === 'fresh-fruits' || selectedCategory === 'fruits') {
+          if (!catStr.includes('fruit') && !catStr.includes('apple') && !catStr.includes('banana') && !catStr.includes('orange') && !catStr.includes('pomegranate') && !catStr.includes('anar') && !catStr.includes('mango') && !catStr.includes('santr')) return false;
+        } else if (selectedCategory === 'cold-drinks-juices' || selectedCategory === 'drinks') {
+          if (!catStr.includes('drink') && !catStr.includes('juice') && !catStr.includes('coke') && !catStr.includes('cola') && !catStr.includes('thums') && !catStr.includes('tea') && !catStr.includes('coffee') && !catStr.includes('nescafe') && !catStr.includes('sprite') && !catStr.includes('red bull') && !catStr.includes('frooti')) return false;
+        } else if (selectedCategory === 'cleaning-household' || selectedCategory === 'cleaning') {
+          if (!catStr.includes('clean') && !catStr.includes('surf') && !catStr.includes('detergent') && !catStr.includes('vim') && !catStr.includes('dettol') && !catStr.includes('handwash') && !catStr.includes('harpic') && !catStr.includes('colin') && !catStr.includes('toothpaste') && !catStr.includes('colgate') && !catStr.includes('whisper') && !catStr.includes('wash') && !catStr.includes('ariel')) return false;
+        } else {
+          const catSlug = (p.categorySlug || p.categoryName || '').toLowerCase().replace(/\s+/g, '-');
+          if (!catSlug.includes(selectedCategory.toLowerCase())) return false;
         }
       }
 
@@ -127,9 +147,9 @@ const Shop = () => {
 
       {/* Catalog Header Bar */}
       <div className="bg-[var(--app-card)] border-b border-black/[0.04] dark:border-white/[0.06] py-2.5 transition-colors">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-3.5 sm:px-6 flex items-center justify-between gap-3">
           <div>
-            <h1 className="text-xs font-black tracking-tight text-[var(--app-text-primary)]">
+            <h1 className="text-sm sm:text-base font-black tracking-tight text-[var(--app-text-primary)]">
               All Items ({filteredProducts.length})
             </h1>
           </div>
@@ -139,16 +159,16 @@ const Shop = () => {
             <button
               type="button"
               onClick={() => setIsSortOpen(!isSortOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] border border-black/[0.05] dark:border-white/[0.08] text-[10px] font-bold text-[var(--app-text-primary)] transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/[0.03] dark:bg-white/[0.06] hover:bg-black/[0.06] border border-black/[0.05] dark:border-white/[0.08] text-xs font-bold text-[var(--app-text-primary)] transition cursor-pointer"
             >
-              <ArrowUpDown size={11} className="text-[#635BFF] dark:text-[#7C71FF]" />
+              <ArrowUpDown size={13} className="text-[#635BFF] dark:text-[#7C71FF]" />
               <span>{activeSortLabel}</span>
-              <ChevronDown size={11} className={`transition-transform duration-200 opacity-60 ${isSortOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown size={12} className={`transition-transform duration-200 opacity-60 ${isSortOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Custom Floating Menu */}
             {isSortOpen && (
-              <div className="absolute right-0 mt-1.5 w-44 bg-[var(--app-card)] rounded-xl shadow-xl border border-black/[0.06] dark:border-white/[0.1] py-1 z-50">
+              <div className="absolute right-0 mt-2 w-48 bg-[var(--app-card)] rounded-2xl shadow-xl border border-black/[0.06] dark:border-white/[0.1] p-1.5 z-50">
                 {SORT_OPTIONS.map((option) => (
                   <button
                     key={option.id}
@@ -157,14 +177,14 @@ const Shop = () => {
                       setSortBy(option.id);
                       setIsSortOpen(false);
                     }}
-                    className={`w-full text-left px-3 py-1.5 text-[11px] font-medium flex items-center justify-between transition ${
+                    className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-xl flex items-center justify-between transition ${
                       sortBy === option.id 
-                        ? 'text-[#635BFF] dark:text-[#7C71FF] bg-[#635BFF]/5 font-bold' 
+                        ? 'text-[#635BFF] dark:text-[#7C71FF] bg-[#635BFF]/10 font-bold' 
                         : 'text-[var(--app-text-primary)] hover:bg-black/[0.03] dark:hover:bg-white/[0.05]'
                     }`}
                   >
                     <span>{option.label}</span>
-                    {sortBy === option.id && <Check size={12} className="stroke-[2.5]" />}
+                    {sortBy === option.id && <Check size={14} className="stroke-[2.5]" />}
                   </button>
                 ))}
               </div>
@@ -174,8 +194,8 @@ const Shop = () => {
       </div>
 
       {/* Category Pills Strip */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 pt-2.5 pb-1 w-full">
-        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1">
+      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 pt-3 pb-2 w-full">
+        <div className="flex flex-wrap items-center gap-2">
           {CATEGORY_FILTERS.map((cat) => (
             <button
               key={cat.slug}
@@ -184,10 +204,10 @@ const Shop = () => {
                 setSelectedCategory(cat.slug);
                 setSearchParams(cat.slug === 'all' ? {} : { category: cat.slug });
               }}
-              className={`px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 transition ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-bold shrink-0 transition ${
                 selectedCategory === cat.slug
                   ? 'bg-[#635BFF] text-white shadow-xs'
-                  : 'bg-[var(--app-card)] text-[var(--app-text-muted)] border border-black/[0.04] dark:border-white/[0.06]'
+                  : 'bg-[var(--app-card)] text-[var(--app-text-muted)] border border-black/[0.05] dark:border-white/[0.07] hover:border-[#635BFF]/30'
               }`}
             >
               {cat.name}
@@ -196,19 +216,19 @@ const Shop = () => {
         </div>
       </div>
 
-      {/* Main Grid: Compact mobile grid */}
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 flex-1 w-full">
+      {/* Main Grid */}
+      <main className="max-w-7xl mx-auto px-3.5 sm:px-6 py-4 flex-1 w-full">
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-44 bg-black/[0.03] dark:bg-white/[0.05] rounded-xl animate-pulse" />
+              <div key={i} className="h-56 bg-black/[0.03] dark:bg-white/[0.05] rounded-2xl animate-pulse" />
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12 bg-[var(--app-card)] rounded-2xl border border-black/[0.04] dark:border-white/[0.06] p-6 max-w-sm mx-auto">
-            <span className="text-2xl block mb-1">🔍</span>
-            <h3 className="text-xs font-bold text-[var(--app-text-primary)]">No products found</h3>
-            <p className="text-[10px] text-[var(--app-text-muted)] mt-0.5">Try another category or clear search.</p>
+          <div className="text-center py-12 bg-[var(--app-card)] rounded-2xl border border-black/[0.05] dark:border-white/[0.07] p-6 max-w-sm mx-auto">
+            <span className="text-3xl block mb-2">🔍</span>
+            <h3 className="text-sm font-bold text-[var(--app-text-primary)]">No products found</h3>
+            <p className="text-xs text-[var(--app-text-muted)] mt-1">Try another category or clear search.</p>
             <button
               type="button"
               onClick={() => {
@@ -216,13 +236,13 @@ const Shop = () => {
                 setSearchKeyword('');
                 setSearchParams({});
               }}
-              className="mt-3 px-3 py-1 rounded-full bg-[#635BFF] text-white text-[10px] font-bold"
+              className="mt-4 px-4 py-2 rounded-full bg-[#635BFF] text-white text-xs font-bold"
             >
-              Reset
+              Reset Filters
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
             {filteredProducts.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}

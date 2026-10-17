@@ -33,36 +33,19 @@ const Login = () => {
   const location = useLocation();
   const { theme, setTheme } = useTheme();
 
-  // Redirect if already authenticated as admin
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('role');
-    if (token && role === 'admin') {
-      navigate('/admin', { replace: true });
-    }
-  }, [navigate]);
+  // Check existing session info
+  const currentToken = localStorage.getItem('token');
+  const currentRole = localStorage.getItem('role');
+  const currentName = localStorage.getItem('fullName') || (currentRole === 'admin' ? 'Admin' : 'Customer');
 
   // Channel: 'phone' or 'email'
   const [authChannel, setAuthChannel] = useState('phone'); 
-  // Method: 'password' (default for login) or 'otp'
-  const [authMethod, setAuthMethod] = useState('password'); 
 
   // Form Inputs
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  // OTP Verification Step (for optional OTP login fallback)
-  const [isOtpStep, setIsOtpStep] = useState(false);
-  const [otpCode, setOtpCode] = useState('');
-  const [devOtp, setDevOtp] = useState('');
-  const [resendCountdown, setResendCountdown] = useState(0);
-
-  // Firebase Phone Auth State
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [isUsingFirebase, setIsUsingFirebase] = useState(false);
-  const firebaseReady = isFirebaseConfigured();
 
   // Status & Feedback
   const [error, setError] = useState('');
@@ -83,17 +66,6 @@ const Login = () => {
   const [resetError, setResetError] = useState('');
   const [resetSuccess, setResetSuccess] = useState('');
   const [isResetLoading, setIsResetLoading] = useState(false);
-
-  // Resend Countdown Timer
-  useEffect(() => {
-    let timer;
-    if (resendCountdown > 0) {
-      timer = setInterval(() => {
-        setResendCountdown(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [resendCountdown]);
 
   // Helper to persist auth state and redirect
   const handleAuthSuccess = (data, identifier) => {
@@ -135,183 +107,9 @@ const Login = () => {
     }
   };
 
-  // 1. Send Login OTP
-  // Phone -> Firebase Google SMS (10,000 Free) or Server Gateway fallback
-  // Email -> Nodemailer HTML Email OTP
-  const handleSendLoginOtp = async (e) => {
-    if (e) e.preventDefault();
-    setError('');
-    setSuccessMsg('');
-    setIsLoading(true);
 
-    if (authChannel === 'phone') {
-      const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
-      if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
-        setError('Please enter a valid 10-digit Indian mobile number starting with 6-9');
-        setIsLoading(false);
-        return;
-      }
 
-      // 1A. Primary: Instant Server Auto-OTP dispatch (Auto-fills OTP)
-      try {
-        const response = await fetch(`${API_URL}/api/auth/otp/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: cleanPhone })
-        });
 
-        const data = await response.json();
-        if (response.ok) {
-          setIsUsingFirebase(false);
-          setIsOtpStep(true);
-          const generatedOtp = data.devOtp ? data.devOtp.toString() : '';
-          setDevOtp(generatedOtp);
-          if (generatedOtp) {
-            setOtp(generatedOtp);
-          }
-          setResendCountdown(30);
-          setSuccessMsg(data.message || `Verification OTP generated for +91 ${cleanPhone}`);
-          setIsLoading(false);
-          return;
-        } else {
-          setError(data.error || 'Failed to send OTP via SMS. Please check your phone number.');
-        }
-      } catch (err) {
-        console.warn('Server OTP dispatch notice:', err);
-      }
-
-      // 1B. Firebase Phone Auth fallback
-      if (firebaseReady) {
-        try {
-          const verifier = setupRecaptcha('recaptcha-container');
-          if (verifier) {
-            const confirmRes = await sendFirebaseOtp(cleanPhone, verifier);
-            setConfirmationResult(confirmRes);
-            setIsUsingFirebase(true);
-            setIsOtpStep(true);
-            setResendCountdown(30);
-            setSuccessMsg(`Verification code sent via SMS to +91 ${cleanPhone}`);
-            setIsLoading(false);
-            return;
-          }
-        } catch (fbErr) {
-          console.warn('[Firebase Auth] Error:', fbErr);
-          setError(fbErr.message || 'Firebase SMS verification failed');
-        }
-      }
-
-      setIsLoading(false);
-    } else {
-      // 1C. Email Address Login: Send OTP to Email
-      const cleanEmail = email.trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
-        setError('Please enter a valid email address');
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`${API_URL}/api/auth/otp/send`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          setIsUsingFirebase(false);
-          setIsOtpStep(true);
-          setDevOtp(data.devOtp || '');
-          setResendCountdown(30);
-          setSuccessMsg(data.message || `OTP sent to ${cleanEmail}`);
-        } else {
-          setError(data.error || 'Failed to send OTP to email.');
-        }
-      } catch (err) {
-        setError('Could not connect to authentication service.');
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // 2. Verify Login OTP
-  const handleVerifyLoginOtp = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccessMsg('');
-    setIsLoading(true);
-
-    if (!otpCode || otpCode.trim().length < 4) {
-      setError('Please enter the 6-digit verification code sent to you.');
-      setIsLoading(false);
-      return;
-    }
-
-    const cleanCode = otpCode.trim();
-
-    // 2A. Firebase Verification Flow
-    if (isUsingFirebase && confirmationResult) {
-      try {
-        const fbResult = await confirmFirebaseOtp(confirmationResult, cleanCode);
-        const cleanPhone = phone.trim().replace(/\D/g, '').slice(-10);
-
-        const response = await fetch(`${API_URL}/api/auth/firebase-login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            phone: cleanPhone,
-            idToken: fbResult.idToken
-          })
-        });
-
-        const data = await response.json();
-        if (response.ok) {
-          handleAuthSuccess(data, cleanPhone);
-          return;
-        } else {
-          setError(data.error || 'Authentication with Firebase failed.');
-        }
-      } catch (fbVerifyErr) {
-        setError(fbVerifyErr.message || 'Invalid or expired Firebase verification code.');
-        setIsLoading(false);
-        return;
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    // 2B. Server Gateway Verification Flow
-    const payload = { otp: cleanCode };
-    const targetIdentifier = authChannel === 'phone' 
-      ? phone.trim().replace(/\D/g, '').slice(-10) 
-      : email.trim().toLowerCase();
-
-    if (authChannel === 'phone') {
-      payload.phone = targetIdentifier;
-    } else {
-      payload.email = targetIdentifier;
-    }
-
-    try {
-      const response = await fetch(`${API_URL}/api/auth/otp/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-      if (response.ok) {
-        handleAuthSuccess(data, targetIdentifier);
-      } else {
-        setError(data.error || 'Invalid or expired OTP code. Please try again.');
-      }
-    } catch (err) {
-      setError('Could not verify OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // 3. Password Login (Traditional / SuperAdmin)
   const handlePasswordLogin = async (e) => {
@@ -320,10 +118,11 @@ const Login = () => {
     setInfoMessage('');
     setIsLoading(true);
 
-    const payload = { password };
+    const rawEmail = email.trim().toLowerCase();
+    const cleanEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@gmail.com`;
     const targetIdentifier = authChannel === 'phone' 
       ? phone.trim().replace(/\D/g, '').slice(-10) 
-      : email.trim().toLowerCase();
+      : cleanEmail;
 
     if (authChannel === 'phone') {
       payload.phone = targetIdentifier;
@@ -368,9 +167,9 @@ const Login = () => {
         return;
       }
       payload.phone = cleanPhone;
-    } else {
-      const cleanEmail = resetEmail.trim().toLowerCase();
-      if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
+      const rawResetEmail = resetEmail.trim().toLowerCase();
+      const cleanEmail = rawResetEmail.includes('@') ? rawResetEmail : `${rawResetEmail}@gmail.com`;
+      if (!rawResetEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
         setResetError('Please enter a valid email address');
         setIsResetLoading(false);
         return;
@@ -414,7 +213,8 @@ const Login = () => {
     if (resetChannel === 'phone') {
       payload.phone = resetPhone.trim().replace(/\D/g, '').slice(-10);
     } else {
-      payload.email = resetEmail.trim().toLowerCase();
+      const rawResetEmail = resetEmail.trim().toLowerCase();
+      payload.email = rawResetEmail.includes('@') ? rawResetEmail : `${rawResetEmail}@gmail.com`;
     }
 
     try {
@@ -489,19 +289,31 @@ const Login = () => {
         {/* Step Header */}
         <div className="mb-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black text-[var(--app-text-primary)] flex items-center gap-1.5">
-              {isOtpStep ? 'Verify OTP' : 'Welcome back'}
+            <h2 className="text-lg font-black text-[var(--app-text-primary)]">
+              Welcome back
             </h2>
           </div>
 
           <p className="text-xs text-slate-500 mt-1">
-            {isOtpStep 
-              ? (authChannel === 'phone' 
-                  ? `Enter the 6-digit code sent via SMS to +91 ${phone}` 
-                  : `Enter the 6-digit code sent to ${email}`)
-              : 'Choose your preferred login method to continue'}
+            Sign in with your mobile number or email address
           </p>
         </div>
+
+        {/* Current Session Indicator */}
+        {currentToken && (
+          <div className="mb-4 p-3 bg-[#635BFF]/10 dark:bg-[#635BFF]/20 border border-[#635BFF]/30 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-xs">
+            <span className="text-[var(--app-text-primary)]">
+              Signed in as <strong>{currentName}</strong> ({currentRole || 'user'})
+            </span>
+            <button
+              type="button"
+              onClick={() => navigate(currentRole === 'admin' ? '/admin' : '/')}
+              className="text-[#635BFF] dark:text-[#A59FFF] font-bold hover:underline shrink-0 cursor-pointer"
+            >
+              Go to {currentRole === 'admin' ? 'Dashboard' : 'Store'} &rarr;
+            </button>
+          </div>
+        )}
 
         {/* Global Feedback Notifications */}
         {infoMessage && (
@@ -525,291 +337,168 @@ const Login = () => {
           </div>
         )}
 
-        {/* STEP 1: INITIAL LOGIN VIEW (CHANNEL SELECTION & INPUT) */}
-        {!isOtpStep && (
-          <>
-            {/* Login Channel Tabs: Phone vs Email */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl mb-5 border border-slate-200/60">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthChannel('phone');
-                  setError('');
-                }}
-                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  authChannel === 'phone'
-                    ? 'bg-white text-slate-900 shadow-sm shadow-slate-300/50'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Phone size={15} className={authChannel === 'phone' ? 'text-[#635BFF]' : ''} />
-                <span>Mobile Phone</span>
-              </button>
+        {/* Login Channel Tabs: Phone vs Email */}
+        <div className="grid grid-cols-2 p-1 bg-slate-100/90 dark:bg-white/[0.08] rounded-2xl mb-4 border border-slate-200/60 dark:border-white/10">
+          <button
+            type="button"
+            onClick={() => {
+              setAuthChannel('phone');
+              setError('');
+            }}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              authChannel === 'phone'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Phone size={15} className={authChannel === 'phone' ? 'text-[#635BFF]' : ''} />
+            <span>Mobile Phone</span>
+          </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setAuthChannel('email');
-                  setError('');
-                }}
-                className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  authChannel === 'email'
-                    ? 'bg-white text-slate-900 shadow-sm shadow-slate-300/50'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <Mail size={15} className={authChannel === 'email' ? 'text-[#635BFF]' : ''} />
-                <span>Email Address</span>
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={() => {
+              setAuthChannel('email');
+              setError('');
+            }}
+            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              authChannel === 'email'
+                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <Mail size={15} className={authChannel === 'email' ? 'text-[#635BFF]' : ''} />
+            <span>Email Address</span>
+          </button>
+        </div>
 
-            {/* Google Authentication Quick Access */}
-            <div className="mb-4">
-              <GoogleAuthButton onError={(err) => setError(err)} label="Continue with Google" />
-            </div>
+        {/* Google Authentication Quick Access */}
+        <div className="mb-4">
+          <GoogleAuthButton onError={(err) => setError(err)} label="Continue with Google" />
+        </div>
 
-            <div className="flex items-center gap-3 my-5">
-              <div className="h-px bg-slate-100 flex-1" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                {authChannel === 'phone' ? 'or login with phone SMS' : 'or login with email OTP'}
-              </span>
-              <div className="h-px bg-slate-100 flex-1" />
-            </div>
+        <div className="flex items-center gap-3 my-4">
+          <div className="h-px bg-slate-100 dark:bg-white/10 flex-1" />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            or sign in with password
+          </span>
+          <div className="h-px bg-slate-100 dark:bg-white/10 flex-1" />
+        </div>
 
-            {/* Input Form based on Channel & Method */}
-            <form onSubmit={authMethod === 'otp' ? handleSendLoginOtp : handlePasswordLogin} className="space-y-4">
-              
-              {/* Phone Channel Input */}
-              {authChannel === 'phone' && (
-                <div>
-                  <div className="mb-1">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                      Mobile Phone Number
-                    </label>
-                  </div>
-                  <div className="relative flex items-center">
-                    <div className="absolute left-3.5 flex items-center gap-1 text-slate-400 font-bold text-xs pointer-events-none">
-                      <Phone size={15} />
-                      <span className="text-slate-500 ml-0.5">+91</span>
-                    </div>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="9876543210"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-16 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-1 font-medium">
-                    {authMethod === 'otp' ? '💬 A 6-digit verification code will be sent via SMS' : ''}
-                  </p>
-                </div>
-              )}
-
-              {/* Email Channel Input */}
-              {authChannel === 'email' && (
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="name@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-semibold text-slate-900 placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
-                    />
-                  </div>
-                  <p className="text-[11px] text-slate-400 mt-1 font-medium">
-                    {authMethod === 'otp' ? '✉️ A 6-digit verification code will be sent to your email' : ''}
-                  </p>
-                </div>
-              )}
-
-              {/* Password Input (Only when authMethod === 'password') */}
-              {authMethod === 'password' && (
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">Password</label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setResetChannel(authChannel);
-                        if (authChannel === 'phone') {
-                          setResetPhone(phone);
-                        } else {
-                          setResetEmail(email);
-                        }
-                        setResetStep(1);
-                        setResetError('');
-                        setResetSuccess('');
-                        setShowOtpModal(true);
-                      }}
-                      className="text-[11px] font-bold text-[#635BFF] hover:underline"
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
-                  <div className="relative">
-                    <Lock size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Enter your account password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-11 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 transition"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Primary Action Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full py-3.5 bg-[#635BFF] text-white rounded-full font-black text-sm hover:bg-[#5248EE] transition shadow-lg shadow-[#635BFF]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    <span>Processing...</span>
-                  </>
-                ) : authMethod === 'otp' ? (
-                  <>
-                    {authChannel === 'phone' ? (
-                      <>
-                        <MessageSquare size={16} />
-                        <span>Send OTP via SMS</span>
-                      </>
-                    ) : (
-                      <>
-                        <Mail size={16} />
-                        <span>Send OTP via Email</span>
-                      </>
-                    )}
-                    <ArrowRight size={16} />
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Toggle between OTP and Password Mode */}
-            <div className="mt-4 text-center">
-              {authMethod === 'otp' ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMethod('password');
-                    setError('');
-                  }}
-                  className="text-xs font-bold text-slate-600 hover:text-[#635BFF] transition"
-                >
-                  Prefer password? <span className="underline">Sign in with password</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMethod('otp');
-                    setError('');
-                  }}
-                  className="text-xs font-bold text-[#635BFF] hover:underline transition"
-                >
-                  ⚡ Sign in with OTP (Passwordless)
-                </button>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* STEP 2: OTP VERIFICATION VIEW */}
-        {isOtpStep && (
-          <form onSubmit={handleVerifyLoginOtp} className="space-y-4">
-            
-
-
+        {/* Password Login Form */}
+        <form onSubmit={handlePasswordLogin} className="space-y-4">
+          
+          {/* Phone Channel Input */}
+          {authChannel === 'phone' && (
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Enter 6-Digit OTP Code
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Mobile Phone Number
               </label>
-              <input
-                type="text"
-                required
-                maxLength="6"
-                placeholder="• • • • • •"
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                autoFocus
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-xl font-mono tracking-widest text-center font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF]"
-              />
+              <div className="relative flex items-center">
+                <div className="absolute left-3.5 flex items-center gap-1 text-slate-400 font-bold text-xs pointer-events-none">
+                  <Phone size={15} />
+                  <span className="text-slate-500 ml-0.5">+91</span>
+                </div>
+                <input
+                  type="tel"
+                  required
+                  placeholder="9876543210"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full pl-16 pr-4 py-3 bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
+                />
+              </div>
             </div>
+          )}
 
-            {/* OTP Actions: Verify Button */}
-            <button
-              type="submit"
-              disabled={isLoading || otpCode.length < 4}
-              className="w-full py-3.5 bg-[#635BFF] text-white rounded-full font-black text-sm hover:bg-[#5248EE] transition shadow-lg shadow-[#635BFF]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin" />
-                  <span>Verifying Code...</span>
-                </>
-              ) : (
-                <>
-                  <span>Verify & Log In</span>
-                  <ArrowRight size={16} />
-                </>
-              )}
-            </button>
+          {/* Email Channel Input */}
+          {authChannel === 'email' && (
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Email Address
+              </label>
+              <div className="relative flex items-center">
+                <Mail size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  required
+                  placeholder="yourname"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-24 py-3 bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
+                />
+                {!email.includes('@') && (
+                  <span className="absolute right-3 px-2 py-0.5 bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold pointer-events-none select-none">
+                    @gmail.com
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
-            {/* Resend and Edit options */}
-            <div className="pt-2 flex items-center justify-between text-xs">
+          {/* Password Input */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">Password</label>
               <button
                 type="button"
                 onClick={() => {
-                  setIsOtpStep(false);
-                  setOtpCode('');
-                  setDevOtp('');
-                  setConfirmationResult(null);
-                  setError('');
-                  setSuccessMsg('');
+                  setResetChannel(authChannel);
+                  if (authChannel === 'phone') {
+                    setResetPhone(phone);
+                  } else {
+                    setResetEmail(email);
+                  }
+                  setResetStep(1);
+                  setResetError('');
+                  setResetSuccess('');
+                  setShowOtpModal(true);
                 }}
-                className="font-bold text-slate-500 hover:text-slate-800 transition"
+                className="text-[11px] font-bold text-[#635BFF] hover:underline cursor-pointer"
               >
-                ← Change {authChannel === 'phone' ? 'Number' : 'Email'}
-              </button>
-
-              <button
-                type="button"
-                disabled={resendCountdown > 0 || isLoading}
-                onClick={handleSendLoginOtp}
-                className="font-bold text-[#635BFF] hover:underline disabled:text-slate-400 disabled:no-underline flex items-center gap-1"
-              >
-                <RotateCw size={13} className={resendCountdown > 0 ? '' : 'text-[#635BFF]'} />
-                {resendCountdown > 0 ? `Resend code in ${resendCountdown}s` : 'Resend OTP'}
+                Forgot Password?
               </button>
             </div>
-          </form>
-        )}
+            <div className="relative">
+              <Lock size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                placeholder="Enter your account password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-10 pr-11 py-3 bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF]"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Primary Action Button */}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full py-3.5 bg-[#635BFF] text-white rounded-full font-black text-sm hover:bg-[#5248EE] transition shadow-lg shadow-[#635BFF]/25 flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50 mt-3 cursor-pointer"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 size={18} className="animate-spin" />
+                <span>Signing In...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In</span>
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        </form>
 
         {/* Footer: Create Account Link */}
         <div className="mt-6 pt-4 border-t border-slate-100 text-center">
@@ -920,16 +609,21 @@ const Login = () => {
                     <label className="block text-xs font-bold text-slate-700 mb-1">
                       Registered Email Address
                     </label>
-                    <div className="relative">
-                      <Mail size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                    <div className="relative flex items-center">
+                      <Mail size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
                       <input
-                        type="email"
+                        type="text"
                         required
-                        placeholder="name@example.com"
+                        placeholder="yourname"
                         value={resetEmail}
                         onChange={(e) => setResetEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
+                        className="w-full pl-10 pr-24 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#00B074]/30 focus:border-[#00B074]"
                       />
+                      {!resetEmail.includes('@') && (
+                        <span className="absolute right-3 px-2 py-0.5 bg-slate-200/80 text-slate-600 rounded-lg text-xs font-bold pointer-events-none select-none">
+                          @gmail.com
+                        </span>
+                      )}
                     </div>
                   </div>
                 )}
