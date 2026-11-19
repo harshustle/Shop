@@ -123,6 +123,7 @@ const Login = () => {
     const targetIdentifier = authChannel === 'phone' 
       ? phone.trim().replace(/\D/g, '').slice(-10) 
       : cleanEmail;
+    const payload = {};
 
     if (authChannel === 'phone') {
       payload.phone = targetIdentifier;
