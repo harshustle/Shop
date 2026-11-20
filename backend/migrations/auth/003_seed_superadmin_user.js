@@ -2,7 +2,7 @@
  * Migration 003: Seed SuperAdmin User
  * Provisions the default SuperAdmin credentials (9161955178 / admin) with bcrypt hash
  */
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 module.exports = {
     name: '003_seed_superadmin_user',
