@@ -45,24 +45,62 @@ class NotificationService {
 
     /**
      * Send Mobile SMS OTP
-     * Primary client channel is Google Firebase Phone Auth (10,000 Free SMS/mo).
-     * Backend logs and manages the generated verification code.
+     * Sends transactional SMS through APITxT's unified OTP endpoint.
+     * Development keeps a console fallback so local testing is still possible.
      */
-    async sendSMS({ phone, otp, message }) {
+    async sendSMS({ phone, otp }) {
         const cleanPhone = phone.toString().replace(/\D/g, '').slice(-10);
-        const textMessage = message || `Your FreshCart verification OTP is: ${otp}. Valid for 10 minutes. Do not share with anyone.`;
 
-        console.log(`\n======================================================`);
-        console.log(`📱 [SMS DISPATCHER] Dispatching SMS to: +91 ${cleanPhone}`);
-        console.log(`[MESSAGE]: ${textMessage}`);
-        console.log(`🔑 [VERIFICATION CODE]: OTP for +91 ${cleanPhone} is: ${otp}`);
-        console.log(`======================================================\n`);
+        const apiUrl = (process.env.APITXT_API_URL || 'https://apitxt.com/api/sendOTP').trim();
+        const authKey = (process.env.APITXT_AUTH_KEY || process.env.APITXT_API_KEY || '').trim();
+        const templateId = (process.env.APITXT_TEMPLATE_ID || '').trim();
+        const isProduction = process.env.NODE_ENV === 'production';
+        const missingSettings = authKey ? [] : ['APITXT_AUTH_KEY'];
 
-        return { 
-            success: true, 
-            channel: 'sms', 
-            provider: 'SMS_Service', 
-            devOtp: otp 
+        if (missingSettings.length === 0) {
+            try {
+                const form = new URLSearchParams({
+                    authkey: authKey,
+                    mobile: `91${cleanPhone}`,
+                    otp: otp.toString(),
+                    channel: 'sms',
+                    country: '91'
+                });
+                if (templateId) form.set('template_id', templateId);
+
+                const response = await axios.post(apiUrl, form.toString(), {
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    timeout: 15000
+                });
+
+                if (response.data?.status !== 'success') {
+                    throw new Error(response.data?.message || 'APITxT rejected the SMS request');
+                }
+
+                console.log(`[SMS] APITxT accepted OTP message for +91${cleanPhone}; request: ${response.data?.data?.request_id || 'unknown'}`);
+                return {
+                    success: true,
+                    channel: 'sms',
+                    provider: 'APITxT',
+                    requestId: response.data?.data?.request_id
+                };
+            } catch (error) {
+                const providerError = error.response?.data?.message || error.message;
+                console.error(`[SMS] APITxT dispatch failed for +91${cleanPhone}: ${providerError}`);
+                throw new Error(`SMS provider failed: ${providerError}`);
+            }
+        }
+
+        if (isProduction) {
+            throw new Error('APITxT authentication key is missing');
+        }
+
+        console.warn(`[SMS DEV FALLBACK] APITxT is incomplete (${missingSettings.join(', ')}). OTP for +91${cleanPhone}: ${otp}`);
+        return {
+            success: true,
+            channel: 'sms',
+            provider: 'ConsoleFallback',
+            devOtp: otp
         };
     }
 

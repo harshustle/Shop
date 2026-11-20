@@ -47,6 +47,12 @@ const GoogleAuthButton = ({ onError, label = "Continue with Google", className =
         localStorage.setItem('userAvatar', data.user.avatar);
       }
 
+      if (data.requiresPhoneVerification) {
+        localStorage.setItem('freshcart_google_phone_pending', 'true');
+      } else {
+        localStorage.removeItem('freshcart_google_phone_pending');
+      }
+
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
         detail: { 
@@ -58,7 +64,11 @@ const GoogleAuthButton = ({ onError, label = "Continue with Google", className =
       }));
 
       // Seamless redirect
-      if (data.role === 'admin') {
+      if (data.requiresPhoneVerification) {
+        sessionStorage.removeItem('fresh_basti_map_opened');
+        sessionStorage.removeItem('freshcart_location_confirmed');
+        navigate('/');
+      } else if (data.role === 'admin') {
         navigate('/admin');
       } else {
         navigate('/');

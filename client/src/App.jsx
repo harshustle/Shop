@@ -17,6 +17,7 @@ import NotFound from './pages/NotFound';
 import LegalPage from './pages/LegalPage';
 import FloatingNavDock from './components/FloatingNavDock';
 import CookieConsent from './components/CookieConsent';
+import GooglePhoneVerificationModal from './components/GooglePhoneVerificationModal';
 
 // Requirement: First page should open as signup (/register) if unauthenticated.
 // After OTP signup/login, automatically opens Home (where Basti map opens immediately).
@@ -113,6 +114,8 @@ const AppContent = () => {
 
       {/* Floating Mobile Dock */}
       <FloatingNavDock />
+
+      {!isAuthRoute && <GooglePhoneVerificationModal />}
     </div>
   );
 };

@@ -68,7 +68,7 @@ const userSchema = new mongoose.Schema({
     },
     isPhoneVerified: {
         type: Boolean,
-        default: true
+        default: false
     },
     codBlocked: {
         type: Boolean,

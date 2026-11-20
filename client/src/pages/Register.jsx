@@ -101,7 +101,7 @@ const Register = () => {
     }
   };
 
-  // STEP 1: Submit Unified Form & Send OTP directly to Email
+  // STEP 1: Submit Unified Form & Send OTP to the mobile number
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     setError('');
@@ -153,7 +153,7 @@ const Register = () => {
           if (digitRefs.current[0]) digitRefs.current[0].focus();
         }, 150);
       } else {
-        setError(data.error || 'Failed to send OTP to email. Please verify your details.');
+        setError(data.error || 'Failed to send OTP to your mobile number. Please verify your details.');
       }
     } catch (err) {
       setError('Could not connect to the server. Please verify backend is running.');
@@ -162,7 +162,7 @@ const Register = () => {
     }
   };
 
-  // STEP 2: Verify Email OTP and Complete Registration
+  // STEP 2: Verify Mobile OTP and Complete Registration
   const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     setError('');
@@ -200,6 +200,7 @@ const Register = () => {
         localStorage.setItem('fullName', cleanName);
         localStorage.setItem('userPhone', cleanPhone);
         localStorage.setItem('userEmail', cleanEmail);
+        localStorage.removeItem('freshcart_google_phone_pending');
 
         window.dispatchEvent(new Event('storage'));
         window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
@@ -445,11 +446,11 @@ const Register = () => {
                   Create Account
                 </h1>
                 <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#635BFF]/10 text-[#635BFF]">
-                  Email OTP
+                  Mobile OTP
                 </span>
               </div>
               <p className="text-xs text-[var(--app-text-muted)] mb-4">
-                Fill both your mobile number and email. Verification OTP will be sent to your email.
+                Enter your mobile number and email. OTP will be sent only to your mobile; email will be stored with your account.
               </p>
 
               {/* Error Alert */}
@@ -501,14 +502,14 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* 3. Email Address (OTP sent here) */}
+                {/* 3. Email Address (stored with the account; no OTP sent here) */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
                       Email Address
                     </label>
                     <span className="text-[10px] font-bold text-[#635BFF]">
-                      ✉️ Receives OTP Code
+                      Stored with account
                     </span>
                   </div>
                   <div className="relative flex items-center">
@@ -565,10 +566,10 @@ const Register = () => {
                     {isLoading ? (
                       <div className="flex items-center gap-2">
                         <Loader2 size={16} className="animate-spin" />
-                        <span>Sending OTP to Email...</span>
+                        <span>Sending OTP to Mobile...</span>
                       </div>
                     ) : (
-                      <span>Send OTP to Email</span>
+                      <span>Send OTP to Mobile</span>
                     )}
                     <ArrowRight size={18} strokeWidth={2.2} />
                   </button>
@@ -589,19 +590,19 @@ const Register = () => {
         )}
 
         {/* ========================================================================= */}
-        {/* SCREEN 03: VERIFY EMAIL OTP                                               */}
+        {/* SCREEN 03: VERIFY MOBILE OTP                                              */}
         {/* ========================================================================= */}
         {step === 'otp' && (
           <div className="flex-1 flex flex-col justify-between py-2">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <h1 className="text-2xl font-black tracking-tight text-[var(--app-text-primary)]">
-                  Verify Email
+                  Verify Mobile Number
                 </h1>
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               </div>
               <p className="text-xs text-[var(--app-text-muted)] mb-3">
-                We've sent a 6-digit verification code to <strong className="text-[var(--app-text-primary)]">{email.includes('@') ? email : `${email}@gmail.com`}</strong>{' '}
+                We've sent a 6-digit verification code to <strong className="text-[var(--app-text-primary)]">+91 {phone.trim().replace(/\D/g, '').slice(-10)}</strong>{' '}
                 <button
                   type="button"
                   onClick={() => setStep('form')}
@@ -658,14 +659,14 @@ const Register = () => {
               {/* Resend Timer Text */}
               <div className="text-xs text-[var(--app-text-muted)] text-center my-2">
                 {resendCountdown > 0 ? (
-                  <span>Didn't receive email? Resend code in 0:{resendCountdown < 10 ? `0${resendCountdown}` : resendCountdown}</span>
+                  <span>Didn't receive SMS? Resend code in 0:{resendCountdown < 10 ? `0${resendCountdown}` : resendCountdown}</span>
                 ) : (
                   <button
                     type="button"
                     onClick={handleSendOtp}
                     className="text-[#635BFF] font-bold hover:underline cursor-pointer"
                   >
-                    Resend verification code to {email.includes('@') ? email : `${email}@gmail.com`}
+                    Resend verification code to +91 {phone.trim().replace(/\D/g, '').slice(-10)}
                   </button>
                 )}
               </div>

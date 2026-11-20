@@ -38,12 +38,8 @@ const Login = () => {
   const currentRole = localStorage.getItem('role');
   const currentName = localStorage.getItem('fullName') || (currentRole === 'admin' ? 'Admin' : 'Customer');
 
-  // Channel: 'phone' or 'email'
-  const [authChannel, setAuthChannel] = useState('phone'); 
-
   // Form Inputs
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -75,7 +71,7 @@ const Login = () => {
     const displayName = data.user?.fullName || (data.role === 'admin' ? 'Harsh Srivastava' : 'Customer');
     localStorage.setItem('fullName', displayName);
 
-    if (data.user?.phone || (authChannel === 'phone' && identifier)) {
+    if (data.user?.phone || identifier) {
       const activePhone = data.user?.phone || identifier;
       localStorage.setItem('userPhone', activePhone);
       if (data.role === 'admin') {
@@ -83,8 +79,8 @@ const Login = () => {
       }
     }
 
-    if (data.user?.email || (authChannel === 'email' && identifier)) {
-      const activeEmail = data.user?.email || identifier;
+    if (data.user?.email) {
+      const activeEmail = data.user.email;
       localStorage.setItem('userEmail', activeEmail);
       if (data.role === 'admin') {
         localStorage.setItem('adminEmail', activeEmail);
@@ -95,8 +91,8 @@ const Login = () => {
     window.dispatchEvent(new CustomEvent('freshcart-user-updated', {
       detail: { 
         fullName: displayName, 
-        email: data.user?.email || (authChannel === 'email' ? identifier : ''), 
-        phone: data.user?.phone || (authChannel === 'phone' ? identifier : '') 
+        email: data.user?.email || '',
+        phone: data.user?.phone || identifier
       }
     }));
 
@@ -118,18 +114,13 @@ const Login = () => {
     setInfoMessage('');
     setIsLoading(true);
 
-    const rawEmail = email.trim().toLowerCase();
-    const cleanEmail = rawEmail.includes('@') ? rawEmail : `${rawEmail}@gmail.com`;
-    const targetIdentifier = authChannel === 'phone' 
-      ? phone.trim().replace(/\D/g, '').slice(-10) 
-      : cleanEmail;
-    const payload = {};
-
-    if (authChannel === 'phone') {
-      payload.phone = targetIdentifier;
-    } else {
-      payload.email = targetIdentifier;
+    const targetIdentifier = phone.trim().replace(/\D/g, '').slice(-10);
+    if (!/^[6-9]\d{9}$/.test(targetIdentifier)) {
+      setError('Please enter a valid 10-digit Indian mobile number.');
+      setIsLoading(false);
+      return;
     }
+    const payload = { phone: targetIdentifier, password };
 
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
@@ -168,6 +159,7 @@ const Login = () => {
         return;
       }
       payload.phone = cleanPhone;
+    } else {
       const rawResetEmail = resetEmail.trim().toLowerCase();
       const cleanEmail = rawResetEmail.includes('@') ? rawResetEmail : `${rawResetEmail}@gmail.com`;
       if (!rawResetEmail || !/^\S+@\S+\.\S+$/.test(cleanEmail)) {
@@ -296,7 +288,7 @@ const Login = () => {
           </div>
 
           <p className="text-xs text-slate-500 mt-1">
-            Sign in with your mobile number or email address
+            Sign in with your registered mobile number
           </p>
         </div>
 
@@ -338,41 +330,6 @@ const Login = () => {
           </div>
         )}
 
-        {/* Login Channel Tabs: Phone vs Email */}
-        <div className="grid grid-cols-2 p-1 bg-slate-100/90 dark:bg-white/[0.08] rounded-2xl mb-4 border border-slate-200/60 dark:border-white/10">
-          <button
-            type="button"
-            onClick={() => {
-              setAuthChannel('phone');
-              setError('');
-            }}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              authChannel === 'phone'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Phone size={15} className={authChannel === 'phone' ? 'text-[#635BFF]' : ''} />
-            <span>Mobile Phone</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setAuthChannel('email');
-              setError('');
-            }}
-            className={`flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              authChannel === 'email'
-                ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs'
-                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-            }`}
-          >
-            <Mail size={15} className={authChannel === 'email' ? 'text-[#635BFF]' : ''} />
-            <span>Email Address</span>
-          </button>
-        </div>
-
         {/* Google Authentication Quick Access */}
         <div className="mb-4">
           <GoogleAuthButton onError={(err) => setError(err)} label="Continue with Google" />
@@ -389,9 +346,8 @@ const Login = () => {
         {/* Password Login Form */}
         <form onSubmit={handlePasswordLogin} className="space-y-4">
           
-          {/* Phone Channel Input */}
-          {authChannel === 'phone' && (
-            <div>
+          {/* Registered phone input */}
+          <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                 Mobile Phone Number
               </label>
@@ -409,33 +365,7 @@ const Login = () => {
                   className="w-full pl-16 pr-4 py-3 bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
                 />
               </div>
-            </div>
-          )}
-
-          {/* Email Channel Input */}
-          {authChannel === 'email' && (
-            <div>
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                Email Address
-              </label>
-              <div className="relative flex items-center">
-                <Mail size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="text"
-                  required
-                  placeholder="yourname"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-24 py-3 bg-slate-50 dark:bg-white/[0.05] border border-slate-200 dark:border-white/10 rounded-2xl text-sm font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:ring-2 focus:ring-[#635BFF]/30 focus:border-[#635BFF] transition"
-                />
-                {!email.includes('@') && (
-                  <span className="absolute right-3 px-2 py-0.5 bg-slate-200/80 dark:bg-white/10 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold pointer-events-none select-none">
-                    @gmail.com
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
+          </div>
 
           {/* Password Input */}
           <div>
@@ -444,12 +374,8 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setResetChannel(authChannel);
-                  if (authChannel === 'phone') {
-                    setResetPhone(phone);
-                  } else {
-                    setResetEmail(email);
-                  }
+                  setResetChannel('phone');
+                  setResetPhone(phone);
                   setResetStep(1);
                   setResetError('');
                   setResetSuccess('');

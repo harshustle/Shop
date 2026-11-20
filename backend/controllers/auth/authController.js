@@ -12,44 +12,26 @@ const OTP_TTL = 10 * 60; // 10 minutes
 
 /**
  * Phase 1 Core Authentication: Login
- * Authenticates SuperAdmin or Customer via Phone/Email and password
+ * Authenticates SuperAdmin or Customer via registered mobile number and password.
  */
 const login = async (req, res) => {
     try {
-        const { phone, email, identifier, password } = req.body;
+        const { phone, password } = req.body;
 
-        if (!password || (!phone && !email && !identifier)) {
+        if (!password || !phone) {
             return res.status(400).json({ 
-                error: 'Validation failed: Password and either Mobile Number or Email are required' 
+                error: 'Validation failed: Mobile number and password are required'
             });
         }
 
-        // Determine target phone or email
-        let targetPhone = phone ? phone.trim().replace(/\D/g, '').slice(-10) : null;
-        let targetEmail = email ? email.trim().toLowerCase() : null;
-
-        if (!targetPhone && !targetEmail && identifier) {
-            const cleanIdent = identifier.trim();
-            if (cleanIdent.includes('@')) {
-                targetEmail = cleanIdent.toLowerCase();
-            } else {
-                targetPhone = cleanIdent.replace(/\D/g, '').slice(-10);
-            }
+        const targetPhone = phone.toString().trim().replace(/\D/g, '').slice(-10);
+        if (!/^[6-9]\d{9}$/.test(targetPhone)) {
+            return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number' });
         }
 
-
-
-        // 2. Query User in MongoDB
-        let query = null;
-        if (targetPhone) {
-            query = { phone: targetPhone };
-        } else if (targetEmail) {
-            query = { email: targetEmail };
-        }
-
-        const user = await User.findOne(query);
+        const user = await User.findOne({ phone: targetPhone });
         if (!user) {
-            return res.status(401).json({ error: 'Invalid mobile number/email or password' });
+            return res.status(401).json({ error: 'Invalid mobile number or password' });
         }
 
         if (user.isActive === false) {
@@ -58,7 +40,7 @@ const login = async (req, res) => {
 
         const isMatch = await user.comparePassword(password);
         if (!isMatch) {
-            return res.status(401).json({ error: 'Invalid mobile number/email or password' });
+            return res.status(401).json({ error: 'Invalid mobile number or password' });
         }
 
         // Update login timestamp
@@ -86,15 +68,14 @@ const login = async (req, res) => {
 
 /**
  * Send Signup Verification OTP
- * Verifies email or phone is not yet taken, stores ephemeral OTP in Redis,
- * and dispatches SMS (phone) or HTML Email (email).
+ * Validates signup details, stores a mobile OTP in Redis, and dispatches it by SMS.
  */
 const sendSignupOtp = async (req, res) => {
     try {
         const { phone, email, fullName } = req.body;
 
-        if (!phone && !email) {
-            return res.status(400).json({ error: 'Mobile phone number or email address is required for signup' });
+        if (!phone) {
+            return res.status(400).json({ error: 'Mobile phone number is required for signup verification' });
         }
 
         let cleanPhone = null;
@@ -124,34 +105,7 @@ const sendSignupOtp = async (req, res) => {
             }
         }
 
-        // When email is provided (or both phone & email), send OTP to Email as requested
-        if (cleanEmail) {
-            const otp = Math.floor(100000 + Math.random() * 900000).toString();
-            const otpKey = `otp:signup:email:${cleanEmail}`;
-            await RedisService.set(otpKey, otp, OTP_TTL);
-
-            // Also cache under phone if phone was provided
-            if (cleanPhone) {
-                await RedisService.set(`otp:signup:phone:${cleanPhone}`, otp, OTP_TTL);
-            }
-
-            const result = await NotificationService.sendEmail({
-                to: cleanEmail,
-                subject: `FreshCart Signup Verification Code: ${otp}`,
-                otp,
-                name: (fullName || 'Valued Customer').trim()
-            });
-
-            return res.json({
-                success: true,
-                channel: 'email',
-                identifier: cleanEmail,
-                phone: cleanPhone,
-                message: `Verification code sent to ${cleanEmail}`
-            });
-        }
-
-        // Only phone provided
+        // Signup verification is always tied to the mobile number, even when email is provided.
         if (cleanPhone) {
             const otp = Math.floor(100000 + Math.random() * 900000).toString();
             const otpKey = `otp:signup:phone:${cleanPhone}`;
@@ -163,12 +117,16 @@ const sendSignupOtp = async (req, res) => {
                 message: `Your FreshCart signup verification code is ${otp}. Valid for 10 minutes. Do not share with anyone.`
             });
 
+            if (!result.success) {
+                throw new Error('SMS provider did not accept the signup OTP');
+            }
+
             return res.json({
                 success: true,
                 channel: 'sms',
                 identifier: cleanPhone,
-                devOtp: otp,
-                message: `Verification code generated for +91 ${cleanPhone} (Dev OTP: ${otp})`
+                devOtp: process.env.NODE_ENV !== 'production' ? (result.devOtp || otp) : undefined,
+                message: `Verification code sent to +91 ${cleanPhone}`
             });
         }
     } catch (error) {
@@ -179,7 +137,7 @@ const sendSignupOtp = async (req, res) => {
 
 /**
  * Phase 1 Core Authentication: Register
- * Registers new Kirana Buyer / Customer with OTP verification (Phone SMS or Email)
+ * Registers new Kirana Buyer / Customer with mandatory mobile OTP verification.
  */
 const register = async (req, res) => {
     try {
@@ -194,8 +152,8 @@ const register = async (req, res) => {
             return res.status(400).json({ error: 'Validation failed: Password must be at least 4 characters long' });
         }
 
-        if (!phone && !email) {
-            return res.status(400).json({ error: 'Validation failed: Mobile phone number or email is required' });
+        if (!phone) {
+            return res.status(400).json({ error: 'Validation failed: Mobile phone number is required' });
         }
 
         let cleanPhone = null;
@@ -225,18 +183,10 @@ const register = async (req, res) => {
             }
         }
 
-        // OTP Verification check (Checks email first if provided, else phone)
+        // Signup OTP verification is always bound to the mobile number.
         let isOtpValid = false;
         if (otp) {
-            if (cleanEmail) {
-                const otpKey = `otp:signup:email:${cleanEmail}`;
-                const storedOtp = await RedisService.get(otpKey);
-                if (storedOtp && storedOtp.toString().trim() === otp.toString().trim()) {
-                    isOtpValid = true;
-                    await RedisService.del(otpKey);
-                }
-            }
-            if (!isOtpValid && cleanPhone) {
+            if (cleanPhone) {
                 const otpKey = `otp:signup:phone:${cleanPhone}`;
                 const storedOtp = await RedisService.get(otpKey);
                 if (storedOtp && storedOtp.toString().trim() === otp.toString().trim()) {
@@ -263,8 +213,8 @@ const register = async (req, res) => {
             password: password,
             role: assignedRole,
             isActive: true,
-            isPhoneVerified: Boolean(cleanPhone),
-            isEmailVerified: Boolean(cleanEmail),
+            isPhoneVerified: isOtpValid || Boolean(firebaseIdToken),
+            isEmailVerified: false,
             lastLoginAt: new Date()
         });
 
@@ -431,6 +381,10 @@ const sendPasswordResetOtp = async (req, res) => {
                 otp,
                 name: user.fullName
             });
+        }
+
+        if (!dispatchResult.success) {
+            throw new Error(`The ${channel} provider did not accept the verification code`);
         }
 
         res.json({
@@ -605,7 +559,8 @@ const googleAuth = async (req, res) => {
                 googleId,
                 avatar: picture || null,
                 role: 'customer',
-                isActive: true
+                isActive: true,
+                isPhoneVerified: false
             });
         }
 
@@ -621,6 +576,7 @@ const googleAuth = async (req, res) => {
         await RedisService.set(`user:profile:${user._id}`, user.toSafeJSON(), PROFILE_TTL);
 
         const tokenPair = TokenService.generateTokenPair(user);
+        const requiresPhoneVerification = !user.phone || user.isPhoneVerified !== true;
 
         return res.json({
             message: 'Google authentication successful',
@@ -628,11 +584,103 @@ const googleAuth = async (req, res) => {
             accessToken: tokenPair.accessToken,
             refreshToken: tokenPair.refreshToken,
             role: user.role,
+            requiresPhoneVerification,
             user: user.toSafeJSON()
         });
     } catch (error) {
         console.error('Google auth internal failure:', error);
         res.status(500).json({ error: 'Google authentication failed', details: error.message });
+    }
+};
+
+/**
+ * Send an OTP to attach a verified mobile number to a Google-authenticated user.
+ */
+const sendGooglePhoneOtp = async (req, res) => {
+    try {
+        const cleanPhone = (req.body.phone || '').toString().replace(/\D/g, '').slice(-10);
+        if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+            return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number starting with 6-9' });
+        }
+
+        const user = await User.findById(req.userId);
+        if (!user) {
+            return res.status(404).json({ error: 'User account not found' });
+        }
+        if (!user.googleId) {
+            return res.status(400).json({ error: 'Phone onboarding is only available for Google-authenticated accounts' });
+        }
+
+        const phoneOwner = await User.findOne({ phone: cleanPhone, _id: { $ne: user._id } }).select('_id');
+        if (phoneOwner) {
+            return res.status(409).json({ error: 'This mobile number is already linked to another account' });
+        }
+
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpKey = `otp:google-phone:${user._id}:${cleanPhone}`;
+        await RedisService.set(otpKey, otp, OTP_TTL);
+
+        try {
+            await NotificationService.sendSMS({ phone: cleanPhone, otp });
+        } catch (error) {
+            await RedisService.del(otpKey);
+            throw error;
+        }
+
+        return res.json({
+            success: true,
+            phone: cleanPhone,
+            expiresInMinutes: 10,
+            message: `Verification code sent to +91 ${cleanPhone}`,
+            devOtp: process.env.NODE_ENV !== 'production' ? otp : undefined
+        });
+    } catch (error) {
+        console.error('Google phone OTP dispatch error:', error);
+        return res.status(500).json({ error: 'Failed to send mobile verification code', details: error.message });
+    }
+};
+
+/**
+ * Verify the OTP and persist the mobile number on the current Google account.
+ */
+const verifyGooglePhoneOtp = async (req, res) => {
+    try {
+        const cleanPhone = (req.body.phone || '').toString().replace(/\D/g, '').slice(-10);
+        const submittedOtp = (req.body.otp || '').toString().trim();
+        if (!/^[6-9]\d{9}$/.test(cleanPhone) || !/^\d{6}$/.test(submittedOtp)) {
+            return res.status(400).json({ error: 'A valid mobile number and 6-digit OTP are required' });
+        }
+
+        const user = await User.findById(req.userId);
+        if (!user || !user.googleId) {
+            return res.status(404).json({ error: 'Google-authenticated user account not found' });
+        }
+
+        const otpKey = `otp:google-phone:${user._id}:${cleanPhone}`;
+        const storedOtp = await RedisService.get(otpKey);
+        if (!storedOtp || storedOtp.toString().trim() !== submittedOtp) {
+            return res.status(400).json({ error: 'Invalid or expired OTP. Please request a new code.' });
+        }
+
+        const phoneOwner = await User.findOne({ phone: cleanPhone, _id: { $ne: user._id } }).select('_id');
+        if (phoneOwner) {
+            return res.status(409).json({ error: 'This mobile number is already linked to another account' });
+        }
+
+        user.phone = cleanPhone;
+        user.isPhoneVerified = true;
+        await user.save();
+        await RedisService.del(otpKey);
+        await RedisService.set(`user:profile:${user._id}`, user.toSafeJSON(), PROFILE_TTL);
+
+        return res.json({
+            success: true,
+            message: 'Mobile number verified and linked successfully',
+            user: user.toSafeJSON()
+        });
+    } catch (error) {
+        console.error('Google phone OTP verification error:', error);
+        return res.status(500).json({ error: 'Failed to verify mobile number', details: error.message });
     }
 };
 
@@ -754,13 +802,17 @@ const sendLoginOtp = async (req, res) => {
                 otp
             });
 
+            if (!notifyResult.success) {
+                throw new Error('SMS provider did not accept the login OTP');
+            }
+
             return res.json({
                 success: true,
-                message: `Verification code generated for +91 ${cleanPhone} (Dev OTP: ${otp})`,
+                message: `Verification code sent to +91 ${cleanPhone}`,
                 channel: 'sms',
                 phone: cleanPhone,
                 expiresInMinutes: 10,
-                devOtp: otp
+                devOtp: process.env.NODE_ENV !== 'production' ? (notifyResult.devOtp || otp) : undefined
             });
         }
 
@@ -1004,6 +1056,8 @@ module.exports = {
     sendPasswordResetOtp,
     verifyOtpAndResetPassword,
     googleAuth,
+    sendGooglePhoneOtp,
+    verifyGooglePhoneOtp,
     refreshToken,
     logout,
     sendLoginOtp,

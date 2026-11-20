@@ -14,13 +14,17 @@ const {
     logout,
     sendLoginOtp,
     verifyLoginOtp,
-    firebasePhoneLogin
+    firebasePhoneLogin,
+    sendGooglePhoneOtp,
+    verifyGooglePhoneOtp
 } = require('../../controllers/auth/authController');
 
 router.post('/login', login);
 router.post('/register', register);
 router.post('/signup/send-otp', sendSignupOtp);
 router.post('/google', googleAuth);
+router.post('/google/phone/send-otp', auth, sendGooglePhoneOtp);
+router.post('/google/phone/verify-otp', auth, verifyGooglePhoneOtp);
 router.post('/refresh', refreshToken);
 router.post('/logout', logout);
 router.get('/me', auth, getMe);
