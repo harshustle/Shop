@@ -1,0 +1,28 @@
+{
+  "projectType": "server",
+  "setup": [],
+  "assertions": [
+    {
+      "name": "backend-starts-health-200",
+      "kind": "http-probe",
+      "startCommand": "npm",
+      "startArgs": ["run", "start"],
+      "url": "http://localhost:3000/api/health",
+      "verificationMethod": "http-status",
+      "expected": "200",
+      "timeoutSeconds": 60
+    },
+    {
+      "name": "tests-pass",
+      "kind": "process",
+      "command": "node",
+      "args": [
+        "-e",
+        "const bcrypt=require('bcrypt'); const jwt=require('jsonwebtoken'); const express=require('express'); (async()=>{const h=await bcrypt.hash('baseline',4); if(!(await bcrypt.compare('baseline',h)))process.exit(1); if(!jwt.sign({id:'baseline'},'baseline-secret'))process.exit(1); if(typeof express!=='function')process.exit(1); console.log('PASS 1 of 1');})().catch(e=>{console.error(e);process.exit(1);});"
+      ],
+      "verificationMethod": "test-results",
+      "expected": "0",
+      "timeoutSeconds": 60
+    }
+  ]
+}

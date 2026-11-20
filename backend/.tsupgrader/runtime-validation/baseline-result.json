@@ -1,0 +1,98 @@
+{
+  "planHash": "56d662267a79e1e165c7914d6760c50eb53d7dc92566c6f5c18da62b48b374c4",
+  "phase": "baseline",
+  "recordedAtUtc": "2026-11-20T22:34:56.2378442Z",
+  "retryCount": 0,
+  "resetBaseline": true,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 0,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "backend-starts-health-200",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": false,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "\u003Cprobe error: \u003E",
+        "durationMs": 216
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": false,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 1,
+        "outputSample": "node:internal/modules/cjs/loader:1607\r\n  throw err;\r\n  ^\r\n\r\nError: Cannot find module \u0027C:\\Users\\Harsh\\Desktop\\Shop\\backend\\node_modules\\bcrypt\\lib\\binding\\napi-v3\\bcrypt_lib.node\u0027\r\nRequire stack:\r\n- C:\\Users\\Harsh\\Desktop\\Shop\\backend\\node_modules\\bcrypt\\bcrypt.js\r\n- C:\\Users\\Harsh\\Desktop\\Shop\\backend\\[eval]\r\n    at Module._resolveFilename (node:internal/modules/cjs/loader:1603:15)\r\n    at wrapResolveFilename (node:internal/modules/cjs/loader:1145:27)\r\n    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1169:10)\r\n    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1196:12)\r\n    at Module._load (node:internal/modules/cjs/loader:1370:5)\r\n    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)\r\n    at Module.require (node:internal/modules/cjs/loader:1713:12)\r\n    at require (node:internal/modules/helpers:318:16)\r\n    at Object.\u003Canonymous\u003E (C:\\Users\\Harsh\\Desktop\\Shop\\backend\\node_modules\\bcrypt\\bcrypt.js:6:16)\r\n    at Module._compile (node:internal/modules/cjs/loader:1968:14) {\r\n  code: \u0027MODULE_NOT_FOUND\u0027,\r\n  requireStack: [\r\n    \u0027C:\\\\Users\\\\Harsh\\\\Desktop\\\\Shop\\\\backend\\\\node_modules\\\\bcrypt\\\\bcrypt.js\u0027,\r\n    \u0027C:\\\\Users\\\\Harsh\\\\Desktop\\\\Shop\\\\backend\\\\[eval]\u0027\r\n  ]\r\n}\r\n\r\nNode.js v26.13.1\r\n",
+        "durationMs": 148,
+        "testResults": {
+          "testFramework": "unknown",
+          "runnerDetectedFrom": "none",
+          "testsTotal": 0,
+          "testsPassed": 0,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": true
+        }
+      }
+    ],
+    "executions": [
+      {
+        "source": "backend-starts-health-200",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+        "args": [
+          "run",
+          "start"
+        ],
+        "cwd": "C:\\Users\\Harsh\\Desktop\\Shop\\backend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32",
+        "nodeExecutable": "C:\\Program Files\\nodejs\\node.EXE",
+        "nodeVersion": "v26.13.1",
+        "packageManager": "npm",
+        "packageManagerExecutable": "C:\\Program Files\\nodejs\\npm.cmd",
+        "packageManagerVersion": "11.20.0",
+        "cleanup": {
+          "RootProcessId": 12248,
+          "Completed": true,
+          "ProcessesObserved": 4,
+          "ProcessesTerminated": 4,
+          "Failure": null
+        }
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\node.EXE",
+        "args": [
+          "-e",
+          "const bcrypt=require(\u0027bcrypt\u0027); const jwt=require(\u0027jsonwebtoken\u0027); const express=require(\u0027express\u0027); (async()=\u003E{const h=await bcrypt.hash(\u0027baseline\u0027,4); if(!(await bcrypt.compare(\u0027baseline\u0027,h)))process.exit(1); if(!jwt.sign({id:\u0027baseline\u0027},\u0027baseline-secret\u0027))process.exit(1); if(typeof express!==\u0027function\u0027)process.exit(1); console.log(\u0027PASS 1 of 1\u0027);})().catch(e=\u003E{console.error(e);process.exit(1);});"
+        ],
+        "cwd": "C:\\Users\\Harsh\\Desktop\\Shop\\backend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32",
+        "nodeExecutable": null,
+        "nodeVersion": null,
+        "packageManager": null,
+        "packageManagerExecutable": null,
+        "packageManagerVersion": null,
+        "cleanup": {
+          "RootProcessId": 18936,
+          "Completed": true,
+          "ProcessesObserved": 2,
+          "ProcessesTerminated": 0,
+          "Failure": null
+        }
+      }
+    ]
+  }
+}
