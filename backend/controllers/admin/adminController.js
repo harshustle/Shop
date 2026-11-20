@@ -169,7 +169,14 @@ const getCustomers = async (req, res) => {
                 email: cust.email || 'N/A',
                 role: cust.role,
                 isActive: cust.isActive !== false,
+                isPhoneVerified: cust.isPhoneVerified === true,
+                walletBalance: Number(cust.walletBalance || 0),
+                codBlocked: cust.codBlocked === true,
+                rtoCount: Number(cust.rtoCount || 0),
+                referralCode: cust.referralCode || '',
+                lastLoginAt: cust.lastLoginAt || null,
                 createdAt: cust.createdAt,
+                updatedAt: cust.updatedAt,
                 ordersCount: customerOrders.length,
                 totalSpend
             };

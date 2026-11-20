@@ -2,6 +2,7 @@ const fs = require('fs');
 const csv = require('csv-parser');
 const Product = require('../../models/catalog/Product');
 const Category = require('../../models/catalog/Category');
+const redisService = require('../cache/redisService');
 const { v4: uuidv4 } = require('uuid');
 
 const jobsStore = new Map();
@@ -56,6 +57,7 @@ class CsvIngestionService {
             job.status = 'completed';
             job.progressPercent = 100;
             job.completedAt = new Date().toISOString();
+            await redisService.flushPattern('cache:catalog:*').catch(() => {});
             console.log(`[MongoDB CSV Ingestion] Job ${jobId} finished: ${job.processedRows} variants ingested.`);
         } catch (error) {
             console.error(`[MongoDB CSV Ingestion] Job ${jobId} failed:`, error);
@@ -73,9 +75,20 @@ class CsvIngestionService {
     static async processChunk(rows, job) {
         for (const row of rows) {
             try {
-                const title = row.title || row.product_title || row.Title;
-                const sku = (row.sku || row.SKU || '').toUpperCase();
-                const price = parseFloat(row.price || row.Price);
+                const normalizedRow = Object.entries(row).reduce((result, [key, value]) => {
+                    const normalizedKey = String(key)
+                        .replace(/^\uFEFF/, '')
+                        .trim()
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, '_')
+                        .replace(/^_|_$/g, '');
+                    result[normalizedKey] = typeof value === 'string' ? value.trim() : value;
+                    return result;
+                }, {});
+
+                const title = normalizedRow.title || normalizedRow.product_title;
+                const sku = String(normalizedRow.sku || '').toUpperCase();
+                const price = parseFloat(normalizedRow.price);
 
                 if (!title || !sku || isNaN(price) || price < 0) {
                     job.failedRows++;
@@ -87,12 +100,12 @@ class CsvIngestionService {
                     continue;
                 }
 
-                const baseSlug = (row.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
-                const brand = row.brand || row.Brand || '';
-                const description = row.description || row.Description || '';
-                const stock = parseInt(row.stock_quantity || row.stock || 0, 10);
-                const comparePrice = row.compare_at_price ? parseFloat(row.compare_at_price) : undefined;
-                const categoryName = row.category_name || row.Category || 'General';
+                const baseSlug = (normalizedRow.slug || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''));
+                const brand = normalizedRow.brand || '';
+                const description = normalizedRow.description || '';
+                const stock = parseInt(normalizedRow.stock_quantity || normalizedRow.current_stock || normalizedRow.stock || 0, 10);
+                const comparePrice = normalizedRow.compare_at_price ? parseFloat(normalizedRow.compare_at_price) : undefined;
+                const categoryName = normalizedRow.category_name || normalizedRow.category || 'General';
 
                 // 1. Find or create category in MongoDB
                 let category = await Category.findOne({ name: new RegExp(`^${categoryName}$`, 'i') });
@@ -122,9 +135,9 @@ class CsvIngestionService {
 
                 // 3. Upsert variant inside product
                 const attributes = {
-                    color: row.color || row.Color || '',
-                    size: row.size || row.Size || '',
-                    material: row.material || row.Material || ''
+                    color: normalizedRow.color || '',
+                    size: normalizedRow.size || '',
+                    material: normalizedRow.material || ''
                 };
 
                 const existingVariantIndex = product.variants.findIndex(v => v.sku === sku);
@@ -151,7 +164,7 @@ class CsvIngestionService {
                 job.failedRows++;
                 job.errors.push({
                     row: job.processedRows + 1,
-                    sku: row.sku || '',
+                    sku: row.sku || row.SKU || '',
                     error: err.message
                 });
             }

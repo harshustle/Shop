@@ -121,9 +121,30 @@ const CustomerAccount = () => {
     }
   };
 
+  const refreshOrders = async () => {
+    const userPhone = localStorage.getItem('userPhone');
+    if (!userPhone) return;
+
+    try {
+      const response = await fetch(`${API_URL}/api/orders/user/${encodeURIComponent(userPhone)}`, { headers: getHeaders() });
+      if (response.ok) {
+        const data = await response.json();
+        setOrders(Array.isArray(data) ? data : []);
+      }
+    } catch (err) {
+      console.warn('Order status refresh error:', err);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'orders') return undefined;
+    const interval = window.setInterval(refreshOrders, 20000);
+    return () => window.clearInterval(interval);
+  }, [activeTab]);
 
   // Sync tab with URL search parameter
   useEffect(() => {

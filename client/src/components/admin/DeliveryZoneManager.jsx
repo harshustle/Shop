@@ -21,8 +21,10 @@ import {
   Info
 } from 'lucide-react';
 import { API_URL } from '../../config';
+import { useAppDialog } from '../../context/AppDialogContext';
 
 const DeliveryZoneManager = () => {
+  const { showAlert, showConfirm } = useAppDialog();
   // Zone metadata
   const [zoneId, setZoneId] = useState('');
   const [zoneName, setZoneName] = useState('Primary Delivery Zone');
@@ -368,10 +370,10 @@ const DeliveryZoneManager = () => {
           }
         }
       } else {
-        alert('Location not found. Please try entering a city or landmark name.');
+        await showAlert({ title: 'Location not found', message: 'Try entering a city or landmark name.' });
       }
     } catch (err) {
-      alert('Error searching for location.');
+      await showAlert({ title: 'Search failed', message: 'The location service could not be reached. Please try again.', tone: 'danger' });
     } finally {
       setIsSearching(false);
     }
@@ -383,12 +385,17 @@ const DeliveryZoneManager = () => {
   };
 
   // Clear Polygon
-  const handleClearPolygon = () => {
-    if (window.confirm('Are you sure you want to clear the polygon boundary?')) {
-      setPolygonPoints([]);
-      setTestResult(null);
-      if (testMarkerRef.current) testMarkerRef.current.remove();
-    }
+  const handleClearPolygon = async () => {
+    const confirmed = await showConfirm({
+      title: 'Clear delivery boundary?',
+      message: 'All polygon points currently drawn on the map will be removed.',
+      confirmLabel: 'Clear boundary',
+      tone: 'danger'
+    });
+    if (!confirmed) return;
+    setPolygonPoints([]);
+    setTestResult(null);
+    if (testMarkerRef.current) testMarkerRef.current.remove();
   };
 
   // Fit Map to Polygon Bounds

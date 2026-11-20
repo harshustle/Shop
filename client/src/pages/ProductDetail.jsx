@@ -24,12 +24,14 @@ import FreshCartFooter from '../components/FreshCartFooter';
 import CartDrawer from '../components/CartDrawer';
 import CheckoutModal from '../components/CheckoutModal';
 import { useCart } from '../context/CartContext';
+import { useAppDialog } from '../context/AppDialogContext';
 import { API_URL } from '../config';
 
 const ProductDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { showAlert } = useAppDialog();
 
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -105,7 +107,10 @@ const ProductDetail = () => {
     e.preventDefault();
     const token = localStorage.getItem('token');
     if (!token) {
-      alert('Please sign in to your account to leave a verified review.');
+      await showAlert({
+        title: 'Sign in required',
+        message: 'Please sign in to your account to leave a verified review.'
+      });
       navigate('/login');
       return;
     }

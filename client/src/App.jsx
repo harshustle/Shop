@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { AppDialogProvider } from './context/AppDialogContext';
 import Home from './pages/Home';
 import Shop from './pages/Shop';
 import ProductDetail from './pages/ProductDetail';
@@ -123,13 +124,15 @@ const AppContent = () => {
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider>
-        <CartProvider>
-          <Router>
-            <AppContent />
-          </Router>
-        </CartProvider>
-      </ThemeProvider>
+      <AppDialogProvider>
+        <ThemeProvider>
+          <CartProvider>
+            <Router>
+              <AppContent />
+            </Router>
+          </CartProvider>
+        </ThemeProvider>
+      </AppDialogProvider>
     </ErrorBoundary>
   );
 }

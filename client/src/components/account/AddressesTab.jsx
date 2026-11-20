@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { MapPin, Plus, Trash2, Home, Briefcase, CheckCircle2, X } from 'lucide-react';
 import { API_URL } from '../../config';
+import { useAppDialog } from '../../context/AppDialogContext';
 
 const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
+  const { showConfirm } = useAppDialog();
   const [showAddModal, setShowAddModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
@@ -57,7 +59,13 @@ const AddressesTab = ({ addresses = [], onAddressUpdated }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to remove this delivery address?')) return;
+    const confirmed = await showConfirm({
+      title: 'Remove delivery address?',
+      message: 'This saved address will no longer be available during checkout.',
+      confirmLabel: 'Remove address',
+      tone: 'danger'
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`${API_URL}/api/account/addresses/${id}`, {
         method: 'DELETE',

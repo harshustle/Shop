@@ -256,10 +256,26 @@ class InventoryService {
     static async updateStock(variantId, newQuantity) {
         const product = await Product.findOneAndUpdate(
             { "variants._id": variantId },
-            { $set: { "variants.$.stockQuantity": Number(newQuantity) } },
+            { $set: {
+                "variants.$.stockQuantity": Number(newQuantity),
+                "variants.$.stockOnHand": Number(newQuantity)
+            } },
             { new: true }
         );
         return product;
+    }
+
+    static async incrementStock(variantId, addedQuantity) {
+        const increment = Number(addedQuantity);
+        if (!Number.isFinite(increment) || increment <= 0) return null;
+        return Product.findOneAndUpdate(
+            { "variants._id": variantId },
+            { $inc: {
+                "variants.$.stockQuantity": increment,
+                "variants.$.stockOnHand": increment
+            } },
+            { new: true }
+        );
     }
 }
 

@@ -13,9 +13,11 @@ import {
   X
 } from 'lucide-react';
 import { API_URL } from '../../config';
+import { useAppDialog } from '../../context/AppDialogContext';
 
 const ProfileSettingsTab = ({ profileForm, setProfileForm, onProfileSaved }) => {
   const navigate = useNavigate();
+  const { showAlert } = useAppDialog();
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState({ type: '', text: '' });
 
@@ -115,14 +117,22 @@ const ProfileSettingsTab = ({ profileForm, setProfileForm, onProfileSaved }) => 
         localStorage.clear();
         sessionStorage.clear();
         window.dispatchEvent(new Event('storage'));
-        alert('Your account and all associated personal data have been permanently erased from Fresh servers.');
+        await showAlert({
+          title: 'Account deleted',
+          message: 'Your account and all associated personal data have been permanently erased.',
+          tone: 'success'
+        });
         navigate('/register');
       } else {
         const data = await res.json();
-        alert(data.error || 'Failed to delete account. Please contact privacy@freshbasti.in');
+        await showAlert({
+          title: 'Account could not be deleted',
+          message: data.error || 'Please contact privacy@freshbasti.in for help.',
+          tone: 'danger'
+        });
       }
     } catch (err) {
-      alert('Network error while processing data erasure.');
+      await showAlert({ title: 'Network error', message: 'Could not process the data erasure request.', tone: 'danger' });
     } finally {
       setIsDeleting(false);
       setIsDeleteModalOpen(false);

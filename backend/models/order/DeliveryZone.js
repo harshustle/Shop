@@ -41,7 +41,15 @@ const DeliveryZoneSchema = new mongoose.Schema({
     estimatedDeliveryMinutes: {
         type: Number,
         default: 15
-    }
+    },
+    quickPlaces: [{
+        name: { type: String, required: true, trim: true },
+        address: { type: String, default: '', trim: true },
+        lat: { type: Number, required: true },
+        lng: { type: Number, required: true },
+        radiusKm: { type: Number, default: 5, min: 0.5, max: 50 },
+        isEnabled: { type: Boolean, default: true }
+    }]
 }, {
     timestamps: true
 });

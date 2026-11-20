@@ -331,7 +331,11 @@ router.get('/delivery-zone', async (req, res) => {
                 areaSqKm: parseFloat((turf.area(defaultCircle) / 1000000).toFixed(2)),
                 radiusKm: 5,
                 isActive: true,
-                estimatedDeliveryMinutes: 12
+                estimatedDeliveryMinutes: 12,
+                quickPlaces: [
+                    { name: 'Tamkuhi Raj Hub', address: 'NH28, Kushinagar, UP', lat: 26.6924, lng: 84.2868, radiusKm: 5, isEnabled: true },
+                    { name: 'Sewarahi Hub', address: 'Station Road, Kushinagar, UP', lat: 26.7820, lng: 84.3410, radiusKm: 5, isEnabled: true }
+                ]
             });
         }
         QCRedis.setActiveDeliveryZone(zone);
@@ -352,7 +356,8 @@ router.post('/delivery-zone', async (req, res) => {
             polygon,
             radiusKm = 5,
             isActive = true,
-            estimatedDeliveryMinutes = 15
+            estimatedDeliveryMinutes = 15,
+            quickPlaces = []
         } = req.body;
 
         if (!polygon || !polygon.coordinates || !Array.isArray(polygon.coordinates) || polygon.coordinates.length === 0) {
@@ -404,7 +409,15 @@ router.post('/delivery-zone', async (req, res) => {
             areaSqKm,
             radiusKm: Number(radiusKm) || 5,
             isActive: Boolean(isActive),
-            estimatedDeliveryMinutes: Number(estimatedDeliveryMinutes) || 15
+            estimatedDeliveryMinutes: Number(estimatedDeliveryMinutes) || 15,
+            quickPlaces: Array.isArray(quickPlaces) ? quickPlaces.map((place) => ({
+                name: String(place.name || '').trim(),
+                address: String(place.address || '').trim(),
+                lat: Number(place.lat),
+                lng: Number(place.lng),
+                radiusKm: Number(place.radiusKm) || 5,
+                isEnabled: place.isEnabled !== false
+            })).filter((place) => place.name && Number.isFinite(place.lat) && Number.isFinite(place.lng)) : []
         });
 
         // Sync with Redis engine

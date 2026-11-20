@@ -180,6 +180,7 @@ const deleteProduct = async (req, res) => {
     try {
         const { id } = req.params;
         await Product.findByIdAndDelete(id);
+        await redisService.flushPattern('cache:catalog:*').catch(() => {});
         res.json({ message: 'Product deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -347,13 +348,23 @@ const deleteCategory = async (req, res) => {
 const quickRestockVariant = async (req, res) => {
     try {
         const { variantId } = req.params;
-        const { stockQuantity } = req.body;
-        if (stockQuantity === undefined || stockQuantity < 0) {
-            return res.status(400).json({ error: 'Valid stock quantity required' });
+        const { stockQuantity, addedQuantity } = req.body;
+        const isIncrement = addedQuantity !== undefined;
+        const quantity = Number(isIncrement ? addedQuantity : stockQuantity);
+        if (!Number.isFinite(quantity) || (isIncrement ? quantity <= 0 : quantity < 0)) {
+            return res.status(400).json({ error: isIncrement ? 'Added quantity must be greater than zero' : 'Valid stock quantity required' });
         }
-        const updatedProduct = await InventoryService.updateStock(variantId, stockQuantity);
+        const updatedProduct = isIncrement
+            ? await InventoryService.incrementStock(variantId, quantity)
+            : await InventoryService.updateStock(variantId, quantity);
         if (!updatedProduct) return res.status(404).json({ error: 'Variant not found' });
-        res.json({ message: 'Stock updated successfully', product: updatedProduct });
+        await redisService.flushPattern('cache:catalog:*').catch(() => {});
+        const updatedVariant = updatedProduct.variants.find((variant) => String(variant._id) === String(variantId));
+        res.json({
+            message: isIncrement ? `${quantity} units added successfully` : 'Stock updated successfully',
+            product: updatedProduct,
+            stockQuantity: updatedVariant?.stockQuantity
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

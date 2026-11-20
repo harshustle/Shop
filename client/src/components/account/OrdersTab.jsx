@@ -1,18 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Clock, CheckCircle2, Truck, AlertCircle, ExternalLink, ArrowRight } from 'lucide-react';
+import OrderStatusTracker, { getOrderStatusLabel, normalizeOrderStatus } from '../orders/OrderStatusTracker';
 
 const OrdersTab = ({ orders = [] }) => {
   const getStatusBadge = (status) => {
-    switch ((status || '').toLowerCase()) {
+    switch (normalizeOrderStatus(status)) {
       case 'delivered':
         return {
           bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
           icon: <CheckCircle2 size={13} className="text-emerald-600" />,
           label: 'Delivered'
         };
-      case 'shipped':
-      case 'out for delivery':
+      case 'out_for_delivery':
         return {
           bg: 'bg-blue-50 text-blue-700 border-blue-200',
           icon: <Truck size={13} className="text-blue-600" />,
@@ -24,11 +24,18 @@ const OrdersTab = ({ orders = [] }) => {
           icon: <AlertCircle size={13} className="text-rose-600" />,
           label: 'Cancelled'
         };
+      case 'processing':
+      case 'packed':
+        return {
+          bg: 'bg-violet-50 text-violet-700 border-violet-200',
+          icon: <Clock size={13} className="text-violet-600" />,
+          label: getOrderStatusLabel(status)
+        };
       default:
         return {
           bg: 'bg-amber-50 text-amber-700 border-amber-200',
           icon: <Clock size={13} className="text-amber-600" />,
-          label: status || 'Placed'
+          label: getOrderStatusLabel(status)
         };
     }
   };
@@ -105,6 +112,8 @@ const OrdersTab = ({ orders = [] }) => {
                     </span>
                   </div>
                 </div>
+
+                <OrderStatusTracker status={ord.orderStatus || ord.status} compact />
 
                 {/* Items Preview */}
                 <div className="space-y-2">
