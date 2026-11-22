@@ -864,17 +864,47 @@ const AdminPanel = () => {
 
   // Update Order Status Handler
   const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    let previousOrder = null;
+
+    // Move the card immediately. The API request continues in the background so
+    // the pipeline does not wait on network/database latency before updating.
+    setOrdersList((currentOrders) => currentOrders.map((order) => {
+      const matchesOrder = String(order._id || order.id || order.orderNumber) === String(orderId);
+      if (!matchesOrder) return order;
+
+      previousOrder = order;
+      return { ...order, status: newStatus, orderStatus: newStatus };
+    }));
+
     try {
       const res = await fetch(`${API_URL}/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus })
       });
-      if (res.ok) {
-        fetchData();
+
+      if (!res.ok) {
+        throw new Error(`Status update failed (${res.status})`);
       }
+
+      const updatedOrder = await res.json();
+      setOrdersList((currentOrders) => currentOrders.map((order) => (
+        String(order._id || order.id || order.orderNumber) === String(orderId)
+          ? { ...order, ...updatedOrder }
+          : order
+      )));
     } catch (err) {
       console.error('Update status failed', err);
+
+      // Restore only this order if persistence fails; unrelated live UI changes
+      // remain untouched.
+      if (previousOrder) {
+        setOrdersList((currentOrders) => currentOrders.map((order) => (
+          String(order._id || order.id || order.orderNumber) === String(orderId)
+            ? previousOrder
+            : order
+        )));
+      }
     }
   };
 
