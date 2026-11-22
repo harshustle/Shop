@@ -37,17 +37,28 @@ app.use((req, res, next) => {
 });
 
 // CORS setup
-const allowedOrigins = [
+const defaultAllowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://shop-client-v1kw.onrender.com'
+  'https://shop-client-v1kw.onrender.com',
+  'https://digibasti.online',
+  'https://www.digibasti.online'
 ];
+const configuredOrigins = [
+  process.env.CLIENT_URL,
+  process.env.FRONTEND_URL,
+  ...(process.env.ALLOWED_ORIGINS || '').split(',')
+]
+  .map((origin) => origin?.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+const allowedOrigins = new Set([...defaultAllowedOrigins, ...configuredOrigins]);
 
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    if (allowedOrigins.has(normalizedOrigin) || process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
     return callback(new Error('Origin is not allowed by CORS'));
