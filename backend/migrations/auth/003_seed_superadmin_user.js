@@ -7,27 +7,35 @@ module.exports = {
         const phone = (process.env.SUPER_ADMIN_PHONE || '9161955178').replace(/\D/g, '').slice(-10);
         const email = (process.env.SUPER_ADMIN_EMAIL || 'harshustle@gmail.com').trim().toLowerCase();
         const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
-        if (!bootstrapPassword || bootstrapPassword.length < 12) {
+        const users = db.collection('users');
+        const existingOwner = await users.findOne({ phone });
+
+        // Bootstrap credentials are needed only for first-time provisioning.
+        // Re-running deployments must never require or reset the owner's password.
+        if (!existingOwner && (!bootstrapPassword || bootstrapPassword.length < 12)) {
             throw new Error('ADMIN_BOOTSTRAP_PASSWORD (minimum 12 characters) is required to provision the store owner');
         }
 
-        const hashedPassword = await bcrypt.hash(bootstrapPassword, 12);
-        await db.collection('users').updateMany(
+        await users.updateMany(
             { role: 'admin', phone: { $ne: phone } },
             { $set: { role: 'customer', updatedAt: new Date() } }
         );
-        await db.collection('users').updateOne(
+        const ownerFields = {
+            email,
+            fullName: 'harshustle',
+            role: 'admin',
+            isActive: true,
+            isPhoneVerified: true,
+            updatedAt: new Date()
+        };
+        if (!existingOwner) {
+            ownerFields.password = await bcrypt.hash(bootstrapPassword, 12);
+        }
+
+        await users.updateOne(
             { phone },
             {
-                $set: {
-                    email,
-                    fullName: 'harshustle',
-                    password: hashedPassword,
-                    role: 'admin',
-                    isActive: true,
-                    isPhoneVerified: true,
-                    updatedAt: new Date()
-                },
+                $set: ownerFields,
                 $setOnInsert: { createdAt: new Date() }
             },
             { upsert: true }
