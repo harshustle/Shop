@@ -7,10 +7,6 @@ html {
 
 body {
   min-height: 100dvh;
-  overflow-y: visible;
-  overscroll-behavior-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
 }
 
 #root,
@@ -22,16 +18,6 @@ body {
 
 #root {
   min-height: 100dvh;
-}
-
-/* Customer pages use the document as their only vertical scroll container.
-   Avoid nested scroll locks, especially on iOS/Android after closing drawers. */
-.app-shell:not(.app-route-admin) {
-  height: auto !important;
-  max-height: none !important;
-  overflow-x: clip !important;
-  overflow-y: visible !important;
-  touch-action: pan-y;
 }
 
 button,
@@ -61,6 +47,19 @@ svg {
 
   body {
     overflow-x: hidden;
+    overflow-y: visible;
+    overscroll-behavior-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  /* Mobile uses the document as its only vertical scroll container. */
+  .app-shell:not(.app-route-admin) {
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    touch-action: pan-y;
   }
 
   /* Prevent iOS Safari from zooming into fields. */
@@ -131,6 +130,61 @@ svg {
   .app-route-login #main-content,
   .app-route-register #main-content {
     min-height: 100dvh;
+  }
+}
+
+/* Desktop/tablet layout is deliberately separate from phone behavior. */
+@media (min-width: 768px) {
+  html {
+    scroll-padding-top: 80px;
+  }
+
+  body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-y: auto;
+    touch-action: auto;
+  }
+
+  .app-shell:not(.app-route-admin) {
+    min-height: 100vh;
+    height: auto !important;
+    max-height: none !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    padding-bottom: 0;
+    touch-action: auto;
+  }
+
+  .app-route-login,
+  .app-route-register,
+  .app-route-login #main-content,
+  .app-route-register #main-content {
+    min-height: 100vh;
+  }
+
+  /* Desktop dialogs stay centered and never exceed the visible workspace. */
+  .fixed.inset-0.flex.items-center.justify-center {
+    padding: 32px !important;
+    overflow-y: auto;
+  }
+
+  .fixed.inset-0.flex.items-center.justify-center > div,
+  .fixed.inset-0.flex.items-center.justify-center > section,
+  .fixed.inset-0.flex.items-center.justify-center > form {
+    max-height: calc(100vh - 64px);
+    overflow-y: auto;
+  }
+
+  /* Desktop horizontal data areas keep a visible, mouse-friendly scrollbar. */
+  .overflow-x-auto {
+    overscroll-behavior-inline: auto;
+    scroll-snap-type: none;
+    scrollbar-width: thin;
+  }
+
+  .overflow-x-auto > * {
+    scroll-snap-align: none;
   }
 }
 
