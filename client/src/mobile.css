@@ -7,7 +7,10 @@ html {
 
 body {
   min-height: 100dvh;
-  overscroll-behavior-y: none;
+  overflow-y: visible;
+  overscroll-behavior-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 #root,
@@ -15,6 +18,20 @@ body {
 #main-content {
   width: 100%;
   min-width: 0;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+/* Customer pages use the document as their only vertical scroll container.
+   Avoid nested scroll locks, especially on iOS/Android after closing drawers. */
+.app-shell:not(.app-route-admin) {
+  height: auto !important;
+  max-height: none !important;
+  overflow-x: clip !important;
+  overflow-y: visible !important;
+  touch-action: pan-y;
 }
 
 button,
