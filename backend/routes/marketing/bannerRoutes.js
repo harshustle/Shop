@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const superAdminOnly = require('../../middleware/superAdminOnly');
 const {
     getActiveBanners,
     getAdminBanners,
@@ -8,11 +9,6 @@ const {
     toggleBannerStatus,
     deleteBanner
 } = require('../../controllers/marketing/bannerController');
-
-const superAdminOnly = (req, res, next) => {
-    if (req.isAdmin || req.role === 'admin') return next();
-    return res.status(403).json({ error: 'Access denied: Super Admin privilege required' });
-};
 
 // Public
 router.get('/', getActiveBanners);

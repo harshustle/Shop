@@ -7,6 +7,18 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || (JWT_SECRET + '-refresh-token-salt-2026');
 const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 
+if (process.env.NODE_ENV === 'production') {
+    if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+        throw new Error('JWT_SECRET must be configured with at least 32 characters in production');
+    }
+    if (!process.env.JWT_REFRESH_SECRET || process.env.JWT_REFRESH_SECRET.length < 32) {
+        throw new Error('JWT_REFRESH_SECRET must be configured with at least 32 characters in production');
+    }
+    if (process.env.JWT_SECRET === process.env.JWT_REFRESH_SECRET) {
+        throw new Error('Access and refresh token secrets must be different');
+    }
+}
+
 class TokenService {
     /**
      * Issues standard JWT Access Token with user claims

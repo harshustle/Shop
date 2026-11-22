@@ -26,6 +26,16 @@ const quickCommerceRoutes = require('./routes/order/quickCommerceRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self)');
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+  next();
+});
+
 // CORS setup
 const allowedOrigins = [
   'http://localhost:3000',
@@ -40,13 +50,13 @@ app.use(cors({
     if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV !== 'production') {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(new Error('Origin is not allowed by CORS'));
   },
   credentials: true
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // Serve local upload assets if stored locally
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

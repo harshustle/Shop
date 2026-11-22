@@ -194,7 +194,7 @@ const FreshCartNavbar = ({ onOpenCart }) => {
           {/* Right Action Controls: Theme Selector + Bag Button + User Profile */}
           <div className="flex items-center gap-2 sm:gap-2.5">
             {/* Theme Selector */}
-            <div className="flex items-center gap-1 bg-black/[0.03] dark:bg-white/[0.06] p-1 rounded-full border border-black/[0.04] dark:border-white/[0.06]">
+            <div className="theme-selector flex items-center gap-1 bg-black/[0.03] dark:bg-white/[0.06] p-1 rounded-full border border-black/[0.04] dark:border-white/[0.06]">
               <button
                 type="button"
                 onClick={() => setTheme('white')}

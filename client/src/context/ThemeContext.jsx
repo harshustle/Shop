@@ -3,15 +3,19 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  // Themes: 'white' | 'dark' | 'yellow'
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('fresh_theme') || 'white';
-  });
+  // The storefront and admin now share one FreshCart visual system.
+  const [theme] = useState('white');
 
   useEffect(() => {
-    localStorage.setItem('fresh_theme', theme);
+    localStorage.setItem('fresh_theme', 'white');
     const root = document.documentElement;
     root.setAttribute('data-theme', theme);
+    const themeColors = {
+      white: '#F8FAFC',
+      dark: '#0B0D14',
+      yellow: '#FFFDF0',
+    };
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColors[theme]);
 
     // Apply dark class for Tailwind dark: variants
     if (theme === 'dark') {
@@ -26,9 +30,7 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [theme]);
 
-  const toggleTheme = (newTheme) => {
-    setTheme(newTheme);
-  };
+  const toggleTheme = () => {};
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme: toggleTheme }}>

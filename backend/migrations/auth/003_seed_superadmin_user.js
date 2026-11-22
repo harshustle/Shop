@@ -1,47 +1,38 @@
-/**
- * Migration 003: Seed SuperAdmin User
- * Provisions the default SuperAdmin credentials (9161955178 / admin) with bcrypt hash
- */
+/** Migration 003: provision the single store-owner account from secrets. */
 const bcrypt = require('bcryptjs');
 
 module.exports = {
     name: '003_seed_superadmin_user',
     up: async (db) => {
-        console.log('  -> Checking SuperAdmin user account...');
-        const existing = await db.collection('users').findOne({ phone: '9161955178' });
-
-        const hashedPassword = await bcrypt.hash('admin', 10);
-
-        if (!existing) {
-            await db.collection('users').insertOne({
-                phone: '9161955178',
-                email: 'admin@shop.local',
-                fullName: 'Harsh Srivastava',
-                password: hashedPassword,
-                role: 'admin',
-                metadata: { isSuperAdmin: true, department: 'Executive Store Operations' },
-                isActive: true,
-                createdAt: new Date(),
-                updatedAt: new Date()
-            });
-            console.log('  ✓ SuperAdmin user created (Phone: 9161955178, Name: Harsh Srivastava).');
-        } else {
-            await db.collection('users').updateOne(
-                { phone: '9161955178' },
-                {
-                    $set: {
-                        role: 'admin',
-                        password: hashedPassword,
-                        fullName: 'Harsh Srivastava',
-                        updatedAt: new Date()
-                    }
-                }
-            );
-            console.log('  ✓ SuperAdmin credentials verified and name set to Harsh Srivastava.');
+        const phone = (process.env.SUPER_ADMIN_PHONE || '9161955178').replace(/\D/g, '').slice(-10);
+        const email = (process.env.SUPER_ADMIN_EMAIL || 'harshustle@gmail.com').trim().toLowerCase();
+        const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
+        if (!bootstrapPassword || bootstrapPassword.length < 12) {
+            throw new Error('ADMIN_BOOTSTRAP_PASSWORD (minimum 12 characters) is required to provision the store owner');
         }
-    },
 
-    down: async (db) => {
-        // Rollback if necessary
-    }
+        const hashedPassword = await bcrypt.hash(bootstrapPassword, 12);
+        await db.collection('users').updateMany(
+            { role: 'admin', phone: { $ne: phone } },
+            { $set: { role: 'customer', updatedAt: new Date() } }
+        );
+        await db.collection('users').updateOne(
+            { phone },
+            {
+                $set: {
+                    email,
+                    fullName: 'harshustle',
+                    password: hashedPassword,
+                    role: 'admin',
+                    isActive: true,
+                    isPhoneVerified: true,
+                    updatedAt: new Date()
+                },
+                $setOnInsert: { createdAt: new Date() }
+            },
+            { upsert: true }
+        );
+        console.log(`  Store owner secured for phone ending ${phone.slice(-4)}.`);
+    },
+    down: async () => {}
 };

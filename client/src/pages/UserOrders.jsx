@@ -58,14 +58,14 @@ const UserOrders = () => {
   const addressText = typeof address === 'string' ? address : [address?.street, address?.city, address?.state, address?.pincode].filter(Boolean).join(', ');
 
   return (
-    <main className="min-h-screen bg-[#F6F7FB] px-4 py-6 text-slate-900 sm:px-6">
+    <main className="min-h-screen bg-[#F6F7FB] px-4 py-4 text-slate-900 sm:px-6 sm:py-6">
       <div className="mx-auto max-w-3xl space-y-5">
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <header className="flex items-start justify-between gap-2 sm:items-center sm:gap-3">
+          <div className="flex min-w-0 items-start gap-2.5 sm:items-center sm:gap-3">
             <button onClick={() => navigate(-1)} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white" aria-label="Go back"><ArrowLeft size={18} /></button>
             <div>
-              <h1 className="text-2xl font-black">Track your order</h1>
-              <p className="text-xs font-medium text-slate-500">Status refreshes automatically every 20 seconds.</p>
+              <h1 className="text-xl font-black sm:text-2xl">Track your order</h1>
+              <p className="mt-0.5 text-[11px] font-medium leading-4 text-slate-500 sm:text-xs">Status refreshes automatically every 20 seconds.</p>
             </div>
           </div>
           <button onClick={() => fetchOrders()} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white" aria-label="Refresh orders"><RefreshCw size={17} className={isLoading ? 'animate-spin' : ''} /></button>
@@ -92,7 +92,7 @@ const UserOrders = () => {
               </div>
             )}
 
-            <section className="border border-slate-200 bg-white p-5 sm:p-7">
+            <section className="border border-slate-200 bg-white p-4 sm:p-7">
               <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-5">
                 <div>
                   <p className="text-xs font-bold uppercase tracking-wider text-slate-400">Order number</p>

@@ -74,7 +74,7 @@ const LegalPage = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-xs">
+          <div className="hidden items-center gap-2 text-xs sm:flex">
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Verified & Compliant
@@ -84,10 +84,10 @@ const LegalPage = () => {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-8">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-8">
         
         {/* Navigation Tabs */}
-        <nav aria-label="Legal document categories" className="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-none border-b border-black/[0.05] dark:border-white/[0.08] mb-8">
+        <nav aria-label="Legal document categories" className="-mx-4 flex items-center gap-2 overflow-x-auto border-b border-black/[0.05] px-4 pb-4 scrollbar-none dark:border-white/[0.08] mb-5 sm:mx-0 sm:px-0 sm:mb-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -110,7 +110,7 @@ const LegalPage = () => {
         </nav>
 
         {/* Content Section */}
-        <div className="bg-[var(--app-card)] rounded-3xl p-6 sm:p-10 border border-black/[0.05] dark:border-white/[0.08] shadow-sm leading-relaxed">
+        <div className="bg-[var(--app-card)] rounded-2xl sm:rounded-3xl p-4 sm:p-10 border border-black/[0.05] dark:border-white/[0.08] shadow-sm leading-relaxed">
           
           {/* TAB 1: PRIVACY POLICY */}
           {activeTab === 'privacy' && (

@@ -49,7 +49,10 @@ import {
   Download,
   Upload,
   ArrowUpDown,
-  ArrowLeft
+  ArrowLeft,
+  IndianRupee,
+  WalletCards,
+  Banknote
 } from 'lucide-react';
 import { API_URL } from '../config';
 import { useAppDialog } from '../context/AppDialogContext';
@@ -57,16 +60,17 @@ import DeliveryZoneManager from '../components/admin/DeliveryZoneManager';
 import './AdminPanel.css';
 
 const ORDER_PIPELINE_STAGES = [
-  { key: 'new', label: 'New orders', statuses: ['pending'], icon: Clock, nextStatus: 'processing', action: 'Confirm order' },
-  { key: 'confirmed', label: 'Confirmed', statuses: ['processing'], icon: CheckCircle2, nextStatus: 'packed', action: 'Mark packed' },
-  { key: 'packed', label: 'Packed', statuses: ['packed'], icon: Package, nextStatus: 'out_for_delivery', action: 'Send for delivery' },
-  { key: 'delivery', label: 'On the way', statuses: ['out_for_delivery', 'shipped'], icon: Navigation, nextStatus: 'delivered', action: 'Mark delivered' },
-  { key: 'done', label: 'Delivered', statuses: ['delivered'], icon: UserCheck, nextStatus: null, action: null }
+  { key: 'new', label: 'New orders', mobileLabel: 'New', statuses: ['pending'], icon: Clock, nextStatus: 'processing', action: 'Confirm order' },
+  { key: 'confirmed', label: 'Confirmed', mobileLabel: 'Confirm', statuses: ['processing'], icon: CheckCircle2, nextStatus: 'packed', action: 'Mark packed' },
+  { key: 'packed', label: 'Packed', mobileLabel: 'Packed', statuses: ['packed'], icon: Package, nextStatus: 'out_for_delivery', action: 'Send for delivery' },
+  { key: 'delivery', label: 'On the way', mobileLabel: 'On way', statuses: ['out_for_delivery', 'shipped'], icon: Navigation, nextStatus: 'delivered', action: 'Mark delivered' },
+  { key: 'done', label: 'Delivered', mobileLabel: 'Done', statuses: ['delivered'], icon: UserCheck, nextStatus: null, action: null }
 ];
 
 const ADMIN_TAB_META = {
   dashboard: { title: 'Dashboard', shortTitle: 'Dashboard', searchPlaceholder: 'Search dashboard...' },
   orders: { title: 'Orders', shortTitle: 'Orders', searchPlaceholder: 'Search orders...' },
+  payments: { title: 'Money Received', shortTitle: 'Payments', searchPlaceholder: 'Search received payments...' },
   inventory: { title: 'Inventory', shortTitle: 'Inventory', searchPlaceholder: 'Search inventory...' },
   customers: { title: 'Customers', shortTitle: 'Customers', searchPlaceholder: 'Search customers...' },
   'delivery-zone': { title: 'Delivery Zones', shortTitle: 'Zones', searchPlaceholder: 'Search delivery zones...' },
@@ -80,6 +84,7 @@ const ADMIN_TAB_META = {
 const getOrderPipelineStatus = (order) => String(order.status || order.orderStatus || 'pending').toLowerCase();
 
 const OrderPipelineBoard = ({ orders, searchQuery, onUpdateStatus, onPrintLabel }) => {
+  const [mobileStageKey, setMobileStageKey] = useState('new');
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const searchableOrders = orders.filter((order) => {
     if (!normalizedSearch) return true;
@@ -87,9 +92,82 @@ const OrderPipelineBoard = ({ orders, searchQuery, onUpdateStatus, onPrintLabel 
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(normalizedSearch));
   });
+  const mobileStage = ORDER_PIPELINE_STAGES.find((stage) => stage.key === mobileStageKey) || ORDER_PIPELINE_STAGES[0];
+  const MobileStageIcon = mobileStage.icon;
+  const mobileOrders = searchableOrders.filter((order) => mobileStage.statuses.includes(getOrderPipelineStatus(order)));
 
   return (
     <section className="admin-order-pipeline">
+      <div className="admin-mobile-pipeline">
+        <div className="admin-mobile-stage-tabs" role="tablist" aria-label="Order status">
+          {ORDER_PIPELINE_STAGES.map((stage) => {
+            const StageIcon = stage.icon;
+            const count = searchableOrders.filter((order) => stage.statuses.includes(getOrderPipelineStatus(order))).length;
+            const isActive = mobileStage.key === stage.key;
+            return (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                key={stage.key}
+                onClick={() => setMobileStageKey(stage.key)}
+                className={isActive ? 'is-active' : ''}
+              >
+                <StageIcon size={16} />
+                <span>{stage.mobileLabel}</span>
+                <strong>{count}</strong>
+              </button>
+            );
+          })}
+        </div>
+
+        <header className="admin-mobile-pipeline-header">
+          <div>
+            <span>Current stage</span>
+            <h3>{mobileStage.label}</h3>
+          </div>
+          <strong>{mobileOrders.length} order{mobileOrders.length === 1 ? '' : 's'}</strong>
+        </header>
+
+        <div className="admin-mobile-order-list">
+          {mobileOrders.length === 0 ? (
+            <div className="admin-mobile-orders-empty">
+              <MobileStageIcon size={25} />
+              <strong>No orders here</strong>
+              <span>Orders will appear here when they reach this stage.</span>
+            </div>
+          ) : mobileOrders.map((order) => {
+            const itemCount = order.items?.length || order.products?.length || 0;
+            const firstItem = order.items?.[0]?.productTitleSnapshot || order.products?.[0]?.productName || 'Grocery order';
+            const orderKey = order._id || order.id || order.orderNumber;
+            return (
+              <article className="admin-mobile-order-card" key={orderKey}>
+                <div className="admin-mobile-order-card__top">
+                  <div>
+                    <p>{order.orderNumber || 'New order'}</p>
+                    <span>{order.customerName || 'Customer'} · {order.phoneNumber || 'No phone'}</span>
+                  </div>
+                  <strong>₹{Number(order.totalAmount || order.subtotal || 0).toFixed(2)}</strong>
+                </div>
+                <div className="admin-mobile-order-card__item">
+                  <span>{firstItem}</span>
+                  {itemCount > 1 && <small>+{itemCount - 1} more</small>}
+                </div>
+                <div className="admin-mobile-order-card__meta">
+                  <span>{String(order.paymentMethod || 'COD').toUpperCase()}</span>
+                  <button type="button" onClick={() => onPrintLabel(order._id)}>Print label</button>
+                </div>
+                {mobileStage.nextStatus && (
+                  <button type="button" className="admin-mobile-order-next" onClick={() => onUpdateStatus(order._id, mobileStage.nextStatus)}>
+                    <span>{mobileStage.action}</span><ChevronRight size={17} />
+                  </button>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="admin-pipeline-grid">
         {ORDER_PIPELINE_STAGES.map((stage, stageIndex) => {
           const StageIcon = stage.icon;
@@ -442,7 +520,7 @@ const AdminPanel = () => {
   const initialAdminParams = new URLSearchParams(location.search);
 
   // Active navigation tab
-  // 'dashboard' | 'orders' | 'inventory' | 'customers' | 'reports' | 'settings'
+  // 'dashboard' | 'orders' | 'payments' | 'inventory' | 'customers' | 'reports' | 'settings'
   const [activeTab, setActiveTab] = useState(() => {
     if (initialAdminParams.get('customer')) return 'customers';
     if (initialAdminParams.get('product')) return 'inventory';
@@ -457,9 +535,38 @@ const AdminPanel = () => {
     searchPlaceholder: 'Search...'
   };
 
+  useEffect(() => {
+    if (!isMobileNavOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setIsMobileNavOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [isMobileNavOpen]);
+
+  useEffect(() => {
+    setIsMobileNavOpen(false);
+  }, [activeTab]);
+
   // Global search & filters
   const [searchQuery, setSearchQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
+  const [paymentDateFilter, setPaymentDateFilter] = useState('today');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
+  const [paymentPayerSearch, setPaymentPayerSearch] = useState('');
+  const [expandedPaymentId, setExpandedPaymentId] = useState(null);
+  const [paymentCustomDate, setPaymentCustomDate] = useState(() => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    return new Date(now.getTime() - offset).toISOString().slice(0, 10);
+  });
+  const [paymentTimeFrom, setPaymentTimeFrom] = useState('00:00');
+  const [paymentTimeTo, setPaymentTimeTo] = useState('23:59');
   const [inventorySearch, setInventorySearch] = useState('');
   const [inventoryCategory, setInventoryCategory] = useState('all');
   const [inventoryStock, setInventoryStock] = useState('all');
@@ -610,30 +717,9 @@ const AdminPanel = () => {
   };
 
   const ensureAdminAuth = async () => {
-    let token = localStorage.getItem('token');
+    const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
-    if (!token || role !== 'admin') {
-      try {
-        const res = await fetch(`${API_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: '9161955178', password: 'admin' })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          token = data.token;
-          localStorage.setItem('token', token);
-          localStorage.setItem('role', 'admin');
-          localStorage.setItem('fullName', data.user?.fullName || 'Harsh Srivastava');
-          localStorage.setItem('adminPhone', '9161955178');
-          localStorage.setItem('userPhone', '9161955178');
-          return token;
-        }
-      } catch (e) {
-        console.error('Auto admin auth failed', e);
-      }
-    }
-    return token;
+    return token && role === 'admin' ? token : null;
   };
 
   // Fetch initial dashboard & table data
@@ -1270,6 +1356,71 @@ const AdminPanel = () => {
     });
   }, [ordersList, searchQuery, orderStatusFilter]);
 
+  const allReceivedPayments = useMemo(() => {
+    return ordersList.filter((order) => {
+      const paymentStatus = String(order.paymentStatus || '').toLowerCase();
+      const orderStatus = getOrderPipelineStatus(order);
+      const method = String(order.paymentMethod || 'COD').toUpperCase();
+      return ['paid', 'completed', 'success', 'successful', 'received'].includes(paymentStatus)
+        || (method === 'COD' && orderStatus === 'delivered');
+    });
+  }, [ordersList]);
+
+  const receivedPayments = useMemo(() => {
+    const query = `${searchQuery} ${paymentPayerSearch}`.trim().toLowerCase();
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return allReceivedPayments.filter((order) => {
+      const method = String(order.paymentMethod || 'COD').toUpperCase();
+      const isCash = method === 'COD' || method === 'CASH';
+      const matchesMethod = paymentMethodFilter === 'all'
+        || (paymentMethodFilter === 'cod' && isCash)
+        || (paymentMethodFilter === 'online' && !isCash);
+      const matchesSearch = !query || [order.orderNumber, order.customerName, order.phoneNumber, method, order.transactionId, order.paymentId, order.paymentProvider]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query));
+      const paidAt = new Date(order.paidAt || order.paymentReceivedAt || order.deliveredAt || order.updatedAt || order.createdAt || 0);
+      let matchesDate = true;
+      if (paymentDateFilter === 'today') matchesDate = paidAt >= startOfToday;
+      if (paymentDateFilter === 'yesterday') {
+        const startYesterday = new Date(startOfToday);
+        startYesterday.setDate(startYesterday.getDate() - 1);
+        matchesDate = paidAt >= startYesterday && paidAt < startOfToday;
+      }
+      if (paymentDateFilter === '7days') matchesDate = paidAt >= new Date(now.getTime() - 7 * 86400000);
+      if (paymentDateFilter === '30days') matchesDate = paidAt >= new Date(now.getTime() - 30 * 86400000);
+      if (paymentDateFilter === 'custom') {
+        const rangeStart = new Date(`${paymentCustomDate}T${paymentTimeFrom || '00:00'}:00`);
+        const rangeEnd = new Date(`${paymentCustomDate}T${paymentTimeTo || '23:59'}:59`);
+        matchesDate = !Number.isNaN(rangeStart.getTime())
+          && !Number.isNaN(rangeEnd.getTime())
+          && paidAt >= rangeStart
+          && paidAt <= rangeEnd;
+      }
+      return matchesMethod && matchesSearch && matchesDate;
+    });
+  }, [allReceivedPayments, searchQuery, paymentPayerSearch, paymentMethodFilter, paymentDateFilter, paymentCustomDate, paymentTimeFrom, paymentTimeTo]);
+
+  const paymentSummary = useMemo(() => receivedPayments.reduce((summary, order) => {
+    const amount = Number(order.totalAmount || order.subtotal || order.pricing?.finalTotal || 0);
+    const method = String(order.paymentMethod || 'COD').toUpperCase();
+    summary.total += amount;
+    summary.count += 1;
+    if (method === 'COD' || method === 'CASH') summary.cash += amount;
+    else summary.online += amount;
+    return summary;
+  }, { total: 0, cash: 0, online: 0, count: 0 }), [receivedPayments]);
+
+  const todayReceivedTotal = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return allReceivedPayments.reduce((total, order) => {
+      const paidAt = new Date(order.paidAt || order.paymentReceivedAt || order.deliveredAt || order.updatedAt || order.createdAt || 0);
+      const amount = Number(order.totalAmount || order.subtotal || order.pricing?.finalTotal || 0);
+      return paidAt >= today ? total + amount : total;
+    }, 0);
+  }, [allReceivedPayments]);
+
   const filteredProducts = useMemo(() => {
     const query = `${searchQuery} ${inventorySearch}`.trim().toLowerCase();
     const result = productsList.filter((product) => {
@@ -1578,6 +1729,21 @@ const AdminPanel = () => {
               )}
             </button>
 
+            {/* Received payments */}
+            <button
+              onClick={() => { setActiveTab('payments'); if (isMobile) setIsMobileNavOpen(false); }}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-semibold transition-all ${
+                activeTab === 'payments'
+                  ? 'bg-[#E8F8F0] text-[#00B074] font-bold shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <div className={`w-5 h-5 flex items-center justify-center ${activeTab === 'payments' ? 'text-[#00B074]' : 'text-slate-400'}`}>
+                <IndianRupee size={18} />
+              </div>
+              <span>Money Received</span>
+            </button>
+
             {/* Inventory */}
             <button
               onClick={() => {
@@ -1783,13 +1949,16 @@ const AdminPanel = () => {
       {/* 1. MOBILE NAVIGATION DRAWER (Off-canvas overlay for tablets & smartphones) */}
       {/* ========================================================================= */}
       {isMobileNavOpen && (
-        <div 
+        <button
+          type="button"
+          aria-label="Close navigation menu"
           onClick={() => setIsMobileNavOpen(false)}
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 lg:hidden transition-opacity"
+          className="admin-mobile-backdrop fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 lg:hidden transition-opacity"
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white z-50 p-4 sm:p-5 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+        id="admin-mobile-navigation"
+        className={`admin-mobile-drawer fixed inset-y-0 left-0 w-72 max-w-[88vw] bg-white z-50 p-4 sm:p-5 flex flex-col justify-between shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
           isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -1813,11 +1982,13 @@ const AdminPanel = () => {
           <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <button
               type="button"
-              onClick={() => setIsMobileNavOpen(true)}
+              onClick={() => setIsMobileNavOpen((current) => !current)}
               className="lg:hidden p-2 -ml-1 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition shrink-0"
-              aria-label="Open Navigation Menu"
+              aria-label={isMobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={isMobileNavOpen}
+              aria-controls="admin-mobile-navigation"
             >
-              <Menu size={22} />
+              {isMobileNavOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
             <div className="min-w-0">
               <h2 className="text-base sm:text-xl font-black text-slate-900 tracking-tight truncate">
@@ -1953,10 +2124,10 @@ const AdminPanel = () => {
         {/* VIEW 1: FRESH CART DASHBOARD OVERVIEW (Exact replica of screenshot)     */}
         {/* ===================================================================== */}
         {activeTab === 'dashboard' && (
-          <main className="p-3.5 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 pb-24 lg:pb-8">
+          <main className="admin-dashboard-main p-3.5 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 pb-24 lg:pb-8">
 
             {/* TOP 4 METRIC CARDS */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
+            <div className="admin-dashboard-metrics grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-5">
               
               {/* Card 1: Total Revenue (Featured Green Card) */}
               <div className="admin-metric-card admin-metric-card--accent bg-[#00B074] text-white p-5 rounded-3xl shadow-lg shadow-[#00B074]/20 relative overflow-hidden flex flex-col justify-between">
@@ -2109,7 +2280,7 @@ const AdminPanel = () => {
             </div>
 
             {/* MIDDLE SECTION: CHARTS */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="admin-dashboard-charts grid grid-cols-1 lg:grid-cols-12 gap-6">
 
               {/* Left Chart: Sales By Category Spline Wave Area Chart */}
               <div className="lg:col-span-8 bg-white p-4 sm:p-6 rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
@@ -2317,7 +2488,7 @@ const AdminPanel = () => {
             </div>
 
             {/* BOTTOM SECTION: TOP PRODUCTS & RECENT ORDERS */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="admin-dashboard-bottom grid grid-cols-1 lg:grid-cols-12 gap-6">
 
               {/* Left: Top Products List */}
               <div className="lg:col-span-5 bg-white p-4 sm:p-6 rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
@@ -3400,6 +3571,189 @@ const AdminPanel = () => {
         )}
 
         {/* ===================================================================== */}
+        {/* MONEY RECEIVED VIEW                                                   */}
+        {/* ===================================================================== */}
+        {activeTab === 'payments' && (
+          <main className="p-3.5 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 pb-24 lg:pb-8">
+            <section className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">
+              <article className="bg-[#00B074] text-white p-5 sm:p-6 rounded-3xl shadow-lg shadow-emerald-700/10">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-xs font-black uppercase tracking-wider text-white/75">Filtered total</span>
+                  <IndianRupee size={20} />
+                </div>
+                <strong className="mt-3 block text-3xl font-black">₹{paymentSummary.total.toLocaleString('en-IN')}</strong>
+                <span className="mt-1 block text-xs font-bold text-white/75">{paymentSummary.count} paid order{paymentSummary.count === 1 ? '' : 's'}</span>
+              </article>
+              <article className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-100 shadow-xs">
+                <div className="flex items-center justify-between gap-3 text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-wider">Received today</span>
+                  <Clock size={20} />
+                </div>
+                <strong className="mt-3 block text-2xl font-black text-slate-900">₹{todayReceivedTotal.toLocaleString('en-IN')}</strong>
+              </article>
+              <article className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-100 shadow-xs">
+                <div className="flex items-center justify-between gap-3 text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-wider">Online payments</span>
+                  <WalletCards size={20} />
+                </div>
+                <strong className="mt-3 block text-2xl font-black text-slate-900">₹{paymentSummary.online.toLocaleString('en-IN')}</strong>
+              </article>
+              <article className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-100 shadow-xs">
+                <div className="flex items-center justify-between gap-3 text-slate-400">
+                  <span className="text-xs font-black uppercase tracking-wider">Cash received</span>
+                  <Banknote size={20} />
+                </div>
+                <strong className="mt-3 block text-2xl font-black text-slate-900">₹{paymentSummary.cash.toLocaleString('en-IN')}</strong>
+              </article>
+            </section>
+
+            <section className="grid grid-cols-1 gap-2.5 bg-white p-3 sm:grid-cols-3 sm:p-4 rounded-3xl border border-slate-100 shadow-xs">
+              <label className="flex h-11 items-center gap-2 border border-slate-200 bg-slate-50 px-3">
+                <Search size={16} className="shrink-0 text-slate-400" />
+                <input
+                  type="search"
+                  value={paymentPayerSearch}
+                  onChange={(event) => setPaymentPayerSearch(event.target.value)}
+                  placeholder="Payer, phone or order ID"
+                  className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-semibold outline-none"
+                />
+              </label>
+              <label className="flex h-11 items-center gap-2 border border-slate-200 bg-slate-50 px-3">
+                <Clock size={16} className="shrink-0 text-slate-400" />
+                <select value={paymentDateFilter} onChange={(event) => setPaymentDateFilter(event.target.value)} className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-bold outline-none">
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="7days">Last 7 days</option>
+                  <option value="30days">Last 30 days</option>
+                  <option value="custom">Specific date & time</option>
+                  <option value="all">All time</option>
+                </select>
+              </label>
+              <label className="flex h-11 items-center gap-2 border border-slate-200 bg-slate-50 px-3">
+                <Filter size={16} className="shrink-0 text-slate-400" />
+                <select value={paymentMethodFilter} onChange={(event) => setPaymentMethodFilter(event.target.value)} className="h-full min-w-0 flex-1 border-0 bg-transparent text-sm font-bold outline-none">
+                  <option value="all">COD + Online</option>
+                  <option value="cod">COD / Cash only</option>
+                  <option value="online">Online only</option>
+                </select>
+              </label>
+              {paymentDateFilter === 'custom' && (
+                <div className="grid grid-cols-1 gap-2.5 border-t border-slate-100 pt-3 sm:col-span-3 sm:grid-cols-3">
+                  <label className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Payment date</span>
+                    <input
+                      type="date"
+                      value={paymentCustomDate}
+                      onChange={(event) => setPaymentCustomDate(event.target.value)}
+                      className="h-11 w-full border border-slate-200 bg-slate-50 px-3 text-sm font-bold outline-none focus:border-[#00B074]"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">From time</span>
+                    <input
+                      type="time"
+                      value={paymentTimeFrom}
+                      onChange={(event) => setPaymentTimeFrom(event.target.value)}
+                      className="h-11 w-full border border-slate-200 bg-slate-50 px-3 text-sm font-bold outline-none focus:border-[#00B074]"
+                    />
+                  </label>
+                  <label className="space-y-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">To time</span>
+                    <input
+                      type="time"
+                      value={paymentTimeTo}
+                      onChange={(event) => setPaymentTimeTo(event.target.value)}
+                      className="h-11 w-full border border-slate-200 bg-slate-50 px-3 text-sm font-bold outline-none focus:border-[#00B074]"
+                    />
+                  </label>
+                  {paymentTimeFrom > paymentTimeTo && (
+                    <p className="text-xs font-bold text-rose-600 sm:col-span-3">From time must be earlier than To time.</p>
+                  )}
+                </div>
+              )}
+            </section>
+
+            <section className="bg-white rounded-3xl border border-slate-100 shadow-xs overflow-hidden">
+              <header className="flex items-center justify-between gap-3 p-4 sm:p-6 border-b border-slate-100">
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900">Received transactions</h3>
+                  <p className="text-xs font-medium text-slate-500">Paid online orders and delivered COD collections</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700">{receivedPayments.length}</span>
+              </header>
+
+              {receivedPayments.length === 0 ? (
+                <div className="p-10 text-center">
+                  <IndianRupee size={34} className="mx-auto text-slate-300" />
+                  <h4 className="mt-3 font-black text-slate-900">No received payments found</h4>
+                  <p className="mt-1 text-sm text-slate-500">Paid transactions will appear here automatically.</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {receivedPayments.map((order) => {
+                    const amount = Number(order.totalAmount || order.subtotal || order.pricing?.finalTotal || 0);
+                    const method = String(order.paymentMethod || 'COD').toUpperCase();
+                    const paymentId = order._id || order.orderNumber;
+                    const isExpanded = expandedPaymentId === paymentId;
+                    const paidAt = order.paidAt || order.paymentReceivedAt || order.deliveredAt || order.updatedAt || order.createdAt;
+                    const paymentAccount = order.paymentAccount || order.paymentProvider || order.gateway || (method === 'COD' || method === 'CASH' ? 'Cash collected by delivery partner' : 'Online payment gateway');
+                    const transactionId = order.transactionId || order.paymentId || order.gatewayPaymentId || 'Not provided';
+                    const orderItems = order.items?.length ? order.items : (order.products || []);
+                    return (
+                      <article key={paymentId}>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedPaymentId(isExpanded ? null : paymentId)}
+                          className="flex w-full flex-col gap-3 p-4 text-left transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+                          aria-expanded={isExpanded}
+                        >
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <strong className="text-sm text-slate-900">{order.orderNumber || `Order ${String(order._id || '').slice(-6)}`}</strong>
+                              <span className="bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700">RECEIVED</span>
+                            </div>
+                            <p className="mt-1 truncate text-xs font-medium text-slate-500">{order.customerName || 'Customer'} · {order.phoneNumber || 'No phone'}</p>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 sm:justify-end sm:text-right">
+                            <div>
+                              <span className="text-xs font-black text-slate-400">{method}</span>
+                              <strong className="block text-lg font-black text-slate-900">₹{amount.toLocaleString('en-IN')}</strong>
+                            </div>
+                            <ChevronDown size={18} className={`text-slate-400 transition ${isExpanded ? 'rotate-180' : ''}`} />
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="border-t border-slate-100 bg-slate-50 p-4 sm:px-6">
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                              <div><span className="text-[10px] font-black uppercase text-slate-400">Paid by</span><p className="mt-1 text-sm font-bold text-slate-800">{order.customerName || 'Customer'}<br /><span className="font-medium text-slate-500">{order.phoneNumber || 'No phone'}</span></p></div>
+                              <div><span className="text-[10px] font-black uppercase text-slate-400">Received in account</span><p className="mt-1 text-sm font-bold text-slate-800">{paymentAccount}</p></div>
+                              <div><span className="text-[10px] font-black uppercase text-slate-400">Payment time</span><p className="mt-1 text-sm font-bold text-slate-800">{paidAt ? new Date(paidAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'Not available'}</p></div>
+                              <div><span className="text-[10px] font-black uppercase text-slate-400">Transaction ID</span><p className="mt-1 break-all text-sm font-bold text-slate-800">{transactionId}</p></div>
+                            </div>
+                            <div className="mt-4 border-t border-slate-200 pt-3">
+                              <h5 className="text-xs font-black uppercase tracking-wider text-slate-500">Purchased items ({orderItems.length})</h5>
+                              <div className="mt-2 space-y-2">
+                                {orderItems.length === 0 ? <p className="text-sm text-slate-500">Item details are not available.</p> : orderItems.map((item, index) => (
+                                  <div key={item._id || index} className="flex items-start justify-between gap-3 bg-white px-3 py-2.5 text-sm">
+                                    <span className="font-semibold text-slate-800">{item.productTitleSnapshot || item.productName || item.title || item.name || 'Product'} <span className="text-slate-400">× {item.quantity || 1}</span></span>
+                                    <strong className="shrink-0 text-slate-900">₹{Number(item.totalPrice || item.price * (item.quantity || 1) || item.unitPrice * (item.quantity || 1) || 0).toLocaleString('en-IN')}</strong>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </main>
+        )}
+
+        {/* ===================================================================== */}
         {/* VIEW 5: REPORTS & ANALYTICS VIEW                                      */}
         {/* ===================================================================== */}
         {activeTab === 'reports' && (
@@ -3538,7 +3892,7 @@ const AdminPanel = () => {
         {/* VIEW: DELIVERY ZONE GEOFENCE POLYGON MANAGER                          */}
         {/* ===================================================================== */}
         {activeTab === 'delivery-zone' && (
-          <main className="p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8">
+          <main className="delivery-zone-main p-3.5 sm:p-6 lg:p-8 pb-24 lg:pb-8">
             <DeliveryZoneManager />
           </main>
         )}

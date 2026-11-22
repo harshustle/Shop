@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const superAdminOnly = require('../../middleware/superAdminOnly');
 const {
     applyCoupon,
     getActiveCoupons,
@@ -9,12 +10,6 @@ const {
     toggleCouponStatus,
     deleteCoupon
 } = require('../../controllers/marketing/couponController');
-
-// Super Admin check
-const superAdminOnly = (req, res, next) => {
-    if (req.isAdmin || req.role === 'admin') return next();
-    return res.status(403).json({ error: 'Access denied: Super Admin privilege required' });
-};
 
 // Public endpoints
 router.post('/apply', applyCoupon);

@@ -17,16 +17,16 @@ const FloatingNavDock = () => {
     return null;
   }
 
-  const isHome = location.pathname === '/';
+  const isHome = location.pathname === '/' || location.pathname === '/home';
   const isShop = location.pathname === '/shop';
   const isWishlist = location.pathname === '/account' && location.search.includes('tab=wishlist');
   const isAccount = (location.pathname === '/account' && !isWishlist) || location.pathname === '/orders' || location.pathname === '/track-order';
 
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-auto max-w-[92vw] pointer-events-auto">
+    <div className="fixed left-1/2 -translate-x-1/2 z-40 w-auto max-w-[calc(100vw-20px)] pointer-events-auto bottom-[max(10px,env(safe-area-inset-bottom))]">
       <nav 
         aria-label="Mobile Navigation"
-        className="bg-[var(--app-card)]/95 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.1] shadow-[0_12px_36px_rgba(0,0,0,0.12)] rounded-full px-2.5 py-1.5 flex items-center gap-1.5 sm:gap-2 transition-all duration-300"
+        className="bg-[var(--app-card)]/95 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.1] shadow-[0_12px_36px_rgba(0,0,0,0.12)] rounded-full px-1.5 min-[360px]:px-2.5 py-1.5 flex items-center gap-0.5 min-[360px]:gap-1.5 sm:gap-2 transition-all duration-300"
       >
         {/* 1. Home */}
         <button
@@ -37,6 +37,7 @@ const FloatingNavDock = () => {
               : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
           title="Home"
+          aria-label="Home"
         >
           <Home size={18} strokeWidth={isHome ? 2.5 : 2} />
         </button>
@@ -50,6 +51,7 @@ const FloatingNavDock = () => {
               : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
           title="Explore Catalog"
+          aria-label="Explore catalog"
         >
           <Search size={18} strokeWidth={isShop ? 2.5 : 2} />
         </button>
@@ -59,6 +61,7 @@ const FloatingNavDock = () => {
           onClick={() => setIsCartOpen(true)}
           className="relative flex items-center justify-center w-10 h-10 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-300 active:scale-95"
           title="My Cart"
+          aria-label={`My cart${itemCount ? `, ${itemCount} items` : ''}`}
         >
           <ShoppingBag size={18} strokeWidth={2} />
           {itemCount > 0 && (
@@ -77,6 +80,7 @@ const FloatingNavDock = () => {
               : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
           title="Wishlist"
+          aria-label="Wishlist"
         >
           <Heart size={18} strokeWidth={isWishlist ? 2.5 : 2} className={isWishlist ? 'fill-[#635BFF]' : ''} />
         </button>
@@ -90,6 +94,7 @@ const FloatingNavDock = () => {
               : 'text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
           }`}
           title="My Account"
+          aria-label="My account"
         >
           <User size={18} strokeWidth={isAccount ? 2.5 : 2} />
         </button>

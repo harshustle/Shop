@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { API_URL } from '../config';
+import { saveTokenPair } from '../utils/authSession';
 
 const GoogleAuthButton = ({ onError, label = "Continue with Google", className = "", showArrow = false }) => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const GoogleAuthButton = ({ onError, label = "Continue with Google", className =
       }
 
       // Persist session
-      localStorage.setItem('token', data.token);
+      saveTokenPair(data);
       localStorage.setItem('role', data.role);
       const displayName = data.user?.fullName || 'Customer';
       localStorage.setItem('fullName', displayName);

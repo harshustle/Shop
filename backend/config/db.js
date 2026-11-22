@@ -14,6 +14,9 @@ const mongooseOptions = {
     family: 4 // IPv4
 };
 
+const MAX_CONNECTION_ATTEMPTS = 3;
+const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Recursive migration file scanner supporting domain subfolders
 const scanMigrationFiles = (dir) => {
     let results = [];
@@ -102,7 +105,22 @@ const connectDB = async () => {
             console.warn('MongoDB: Connection disconnected.');
         });
 
-        await mongoose.connect(uri, mongooseOptions);
+        for (let attempt = 1; attempt <= MAX_CONNECTION_ATTEMPTS; attempt++) {
+            try {
+                await mongoose.connect(uri, mongooseOptions);
+                break;
+            } catch (error) {
+                if (attempt === MAX_CONNECTION_ATTEMPTS) throw error;
+
+                const retryDelayMs = 1000 * (2 ** (attempt - 1));
+                console.warn(
+                    `MongoDB connection attempt ${attempt}/${MAX_CONNECTION_ATTEMPTS} failed: ${error.message}. ` +
+                    `Retrying in ${retryDelayMs / 1000}s.`
+                );
+                await wait(retryDelayMs);
+            }
+        }
+
         console.log('MongoDB Connected Successfully.');
 
         // Run migrations only if explicitly enabled (prevent multi-worker race conditions in cluster mode)

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { API_URL } from '../config';
+import { authenticatedFetch, clearTokenPair } from '../utils/authSession';
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const location = useLocation();
-  const [isValidating, setIsValidating] = useState(false);
+  const [isValidating, setIsValidating] = useState(Boolean(requireAdmin && localStorage.getItem('token')));
   const [isAuthorized, setIsAuthorized] = useState(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
     if (!token) return false;
-    if (requireAdmin && role !== 'admin') return false;
+    if (requireAdmin) return false;
     return true;
   });
 
@@ -24,21 +25,20 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
 
     if (requireAdmin && role !== 'admin') {
       setIsAuthorized(false);
+      setIsValidating(false);
       return;
     }
 
     // Verify token validity against backend if present
     let isMounted = true;
     const verifySession = async () => {
+      setIsValidating(true);
       try {
-        const res = await fetch(`${API_URL}/api/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const verificationUrl = requireAdmin ? `${API_URL}/api/admin/metrics` : `${API_URL}/api/auth/me`;
+        const res = await authenticatedFetch(verificationUrl);
         if (!res.ok) {
           if (isMounted) {
-            localStorage.removeItem('token');
+            clearTokenPair();
             localStorage.removeItem('role');
             localStorage.removeItem('fullName');
             localStorage.removeItem('userPhone');
@@ -46,12 +46,13 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
           }
         } else {
           const data = await res.json();
-          if (requireAdmin && data.role !== 'admin') {
-            if (isMounted) setIsAuthorized(false);
-          }
+          if (isMounted) setIsAuthorized(requireAdmin ? data.adminRole === 'Super Admin' : true);
         }
       } catch (err) {
-        // Backend offline or network blip - allow offline cached auth if token format is present
+        // Admin authorization fails closed when the backend cannot verify ownership.
+        if (isMounted && requireAdmin) setIsAuthorized(false);
+      } finally {
+        if (isMounted) setIsValidating(false);
       }
     };
 
@@ -64,11 +65,22 @@ const ProtectedRoute = ({ children, requireAdmin = false }) => {
   }
 
   if (requireAdmin && role !== 'admin') {
-    return <Navigate to="/login" state={{ from: location, message: 'Super Admin access required. Please sign in with admin privileges.' }} replace />;
+    return <Navigate to="/login" state={{ from: location, message: 'Authentication required. Please sign in.' }} replace />;
+  }
+
+  if (isValidating) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-slate-950 text-white">
+        <div className="text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-emerald-400" />
+          <p className="mt-3 text-sm font-bold">Verifying secure admin session…</p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthorized) {
-    return <Navigate to="/login" state={{ from: location, message: 'Session expired or unauthorized. Please sign in again.' }} replace />;
+    return <Navigate to="/login" state={{ from: location, message: 'Your session could not be verified. Please sign in again.' }} replace />;
   }
 
   return children;

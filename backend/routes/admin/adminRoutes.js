@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const superAdminOnly = require('../../middleware/superAdminOnly');
 const {
     getAdminMetrics,
     getCustomers,
@@ -8,14 +9,6 @@ const {
     deleteCustomerByPhone,
     updateAdminProfile
 } = require('../../controllers/admin/adminController');
-
-// Super Admin check middleware
-const superAdminOnly = (req, res, next) => {
-    if (req.isAdmin || req.role === 'admin' || req.userId === 'admin') {
-        return next();
-    }
-    return res.status(403).json({ error: 'Access denied: Super Admin privilege required' });
-};
 
 router.use(auth, superAdminOnly);
 

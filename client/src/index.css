@@ -3,16 +3,19 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root, [data-theme="white"] {
-  --app-bg: #F8FAFC;
+  --app-bg: #F3F3EF;
   --app-card: #FFFFFF;
-  --app-card-border: #F1F5F9;
-  --app-text-primary: #0F172A;
-  --app-text-muted: #64748B;
-  --app-primary: #635BFF;
-  --app-primary-hover: #5248EE;
-  --app-primary-light: #EFEBFF;
+  --app-card-border: #D8D8D1;
+  --app-text-primary: #08090C;
+  --app-text-muted: #686A70;
+  --app-primary: #FFD400;
+  --app-primary-hover: #F1C900;
+  --app-primary-light: #FFF4B3;
   --app-notch-bg: #FFFFFF;
   --app-notch-text: #0F172A;
+  --app-surface-soft: #F7F7F3;
+  --app-input: #FFFFFF;
+  --app-overlay: rgba(15, 23, 42, 0.55);
 }
 
 [data-theme="dark"], .dark {
@@ -26,6 +29,9 @@
   --app-primary-light: #1E1B4B;
   --app-notch-bg: #0B0D14;
   --app-notch-text: #F8FAFC;
+  --app-surface-soft: #1A2030;
+  --app-input: #101521;
+  --app-overlay: rgba(0, 0, 0, 0.72);
 }
 
 [data-theme="yellow"], .theme-yellow {
@@ -39,6 +45,9 @@
   --app-primary-light: #FEF3C7;
   --app-notch-bg: #FFFDF0;
   --app-notch-text: #1C1917;
+  --app-surface-soft: #FFF7CC;
+  --app-input: #FFFDF5;
+  --app-overlay: rgba(41, 32, 4, 0.55);
 }
 
 @layer base {
@@ -73,6 +82,190 @@
 }
 [data-theme="yellow"] ::-webkit-scrollbar-thumb {
   background: #FDE047;
+}
+
+/* Storefront theme bridge --------------------------------------------------
+   Older customer screens still use Tailwind's literal white/slate utilities.
+   Keep their meaning theme-aware while leaving the admin design untouched. */
+.app-shell:not(.app-route-admin) {
+  background: var(--app-bg);
+  color: var(--app-text-primary);
+}
+
+.app-shell .theme-selector {
+  display: none !important;
+}
+
+/* Unified FreshCart storefront: same disciplined black / paper / yellow
+   language as the Super Admin workspace. */
+.app-shell:not(.app-route-admin) [class*="rounded-"] {
+  border-radius: 0 !important;
+}
+
+.app-shell:not(.app-route-admin) [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.app-shell:not(.app-route-admin) [class*="bg-gradient"] {
+  background-image: none !important;
+}
+
+.app-shell:not(.app-route-admin) :where(header, footer, section, article, aside, nav) [class~="bg-white"] {
+  background-color: var(--app-card) !important;
+}
+
+.app-shell:not(.app-route-admin) :where(input, textarea, select) {
+  background: var(--app-card) !important;
+  border: 1px solid #A8A9A4 !important;
+  color: var(--app-text-primary) !important;
+  border-radius: 0 !important;
+}
+
+.app-shell:not(.app-route-admin) :where(input, textarea, select):focus {
+  border-color: #08090C !important;
+  box-shadow: 0 0 0 2px #FFD400 !important;
+  outline: 0;
+}
+
+.app-shell:not(.app-route-admin) :where(
+  button[class*="bg-[#635BFF]"],
+  a[class*="bg-[#635BFF]"],
+  button[class*="bg-[#00B074]"],
+  a[class*="bg-[#00B074]"],
+  button[class*="bg-[#0C831F]"],
+  a[class*="bg-[#0C831F]"]
+) {
+  background: #FFD400 !important;
+  border: 1px solid #08090C !important;
+  color: #08090C !important;
+}
+
+.app-shell:not(.app-route-admin) :where(
+  [class*="text-[#635BFF]"],
+  [class*="text-[#00B074]"],
+  [class*="text-[#0C831F]"]
+) {
+  color: #8A7200 !important;
+}
+
+.app-shell:not(.app-route-admin) :where(
+  [class*="bg-[#EFEBFF]"],
+  [class*="bg-[#E8F8F0]"],
+  [class*="bg-[#F4F4F8]"]
+) {
+  background-color: #FFF4B3 !important;
+}
+
+.app-shell:not(.app-route-admin) table {
+  border-collapse: collapse;
+}
+
+.app-shell:not(.app-route-admin) thead {
+  background: #08090C !important;
+  color: #FFFFFF !important;
+}
+
+.app-shell:not(.app-route-admin) thead * {
+  color: #FFFFFF !important;
+}
+
+.app-shell:not(.app-route-admin) :where(.leaflet-container, .leaflet-container *) {
+  border-radius: 0 !important;
+}
+
+.app-shell:not(.app-route-admin) :where(input, textarea, select) {
+  color-scheme: light;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(input, textarea, select) {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(
+  [class~="bg-white"],
+  [class~="bg-[#F8FAFC]"],
+  [class~="bg-[#F8F9FD]"],
+  [class~="bg-[#F6F7FB]"],
+  [class~="bg-[#F4F6FB]"],
+  [class~="bg-[#F4F4F8]"]
+) {
+  background-color: var(--app-card) !important;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(
+  [class~="bg-slate-50"],
+  [class~="bg-slate-100"],
+  [class~="bg-gray-50"],
+  [class~="bg-gray-100"]
+) {
+  background-color: var(--app-surface-soft) !important;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(
+  [class~="text-slate-900"],
+  [class~="text-slate-800"],
+  [class~="text-slate-700"],
+  [class~="text-gray-900"],
+  [class~="text-gray-800"],
+  [class~="text-gray-700"]
+) {
+  color: var(--app-text-primary) !important;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(
+  [class~="text-slate-600"],
+  [class~="text-slate-500"],
+  [class~="text-slate-400"],
+  [class~="text-gray-600"],
+  [class~="text-gray-500"],
+  [class~="text-gray-400"]
+) {
+  color: var(--app-text-muted) !important;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(
+  [class~="border-slate-100"],
+  [class~="border-slate-200"],
+  [class~="border-gray-100"],
+  [class~="border-gray-200"]
+) {
+  border-color: var(--app-card-border) !important;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(input, textarea, select):not([class*="bg-transparent"]) {
+  background-color: var(--app-input) !important;
+  border-color: var(--app-card-border) !important;
+  color: var(--app-text-primary) !important;
+}
+
+[data-theme="dark"] .app-shell:not(.app-route-admin) :where(input, textarea)::placeholder {
+  color: #64748B !important;
+  opacity: 1;
+}
+
+[data-theme="yellow"] .app-shell:not(.app-route-admin) :where(
+  [class~="bg-[#F8FAFC]"],
+  [class~="bg-[#F8F9FD]"],
+  [class~="bg-[#F6F7FB]"],
+  [class~="bg-[#F4F6FB]"],
+  [class~="bg-[#F4F4F8]"],
+  [class~="bg-slate-50"],
+  [class~="bg-gray-50"]
+) {
+  background-color: var(--app-surface-soft) !important;
+}
+
+[data-theme="yellow"] .app-shell:not(.app-route-admin) :where(
+  [class~="border-slate-100"],
+  [class~="border-slate-200"],
+  [class~="border-gray-100"],
+  [class~="border-gray-200"]
+) {
+  border-color: var(--app-card-border) !important;
+}
+
+[data-theme="yellow"] .app-shell:not(.app-route-admin) :where(input, textarea, select):not([class*="bg-transparent"]) {
+  background-color: var(--app-input);
 }
 
 /* Animations */

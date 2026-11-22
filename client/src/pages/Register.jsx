@@ -20,6 +20,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
+import { saveTokenPair } from '../utils/authSession';
 import GoogleAuthButton from '../components/GoogleAuthButton';
 import LocationPickerModal from '../components/LocationPickerModal';
 
@@ -195,7 +196,7 @@ const Register = () => {
 
       const data = await res.json();
       if (res.ok && (data.success || data.token)) {
-        localStorage.setItem('token', data.token);
+        saveTokenPair(data);
         localStorage.setItem('role', data.role || 'customer');
         localStorage.setItem('fullName', cleanName);
         localStorage.setItem('userPhone', cleanPhone);
@@ -294,7 +295,7 @@ const Register = () => {
             </Link>
 
             {/* Theme selector */}
-            <div className="flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-full">
+            <div className="theme-selector flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.08] p-1 rounded-full">
               <button
                 type="button"
                 onClick={() => setTheme('white')}

@@ -33,11 +33,12 @@ const InitialEntryRoute = () => {
 const AppContent = () => {
   const location = useLocation();
   const isAuthRoute = location.pathname === '/register' || location.pathname === '/login';
+  const routeName = location.pathname.split('/').filter(Boolean)[0] || 'home';
 
   return (
-    <div className={`bg-[var(--app-bg)] text-[var(--app-text-primary)] font-sans antialiased transition-colors duration-200 ${
+    <div className={`app-shell app-route-${routeName} bg-[var(--app-bg)] text-[var(--app-text-primary)] font-sans antialiased transition-colors duration-200 ${
       isAuthRoute 
-        ? 'h-screen h-[100dvh] max-h-screen overflow-hidden p-0' 
+        ? 'min-h-screen min-h-[100dvh] overflow-x-hidden overflow-y-auto p-0'
         : 'min-h-screen pb-20'
     }`}>
       {/* Requirement 15: Accessibility Skip to Content Link */}
@@ -48,7 +49,7 @@ const AppContent = () => {
         Skip to main content
       </a>
 
-      <div id="main-content">
+      <div id="main-content" className="min-w-0">
         <Routes>
           {/* Storefront Customer Routes */}
           <Route path="/" element={<InitialEntryRoute />} />

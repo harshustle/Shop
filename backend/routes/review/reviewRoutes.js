@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const superAdminOnly = require('../../middleware/superAdminOnly');
 const {
     getProductReviews,
     createReview,
@@ -9,11 +10,6 @@ const {
     updateReviewStatus,
     deleteReview
 } = require('../../controllers/review/reviewController');
-
-const superAdminOnly = (req, res, next) => {
-    if (req.isAdmin || req.role === 'admin') return next();
-    return res.status(403).json({ error: 'Access denied: Super Admin privilege required' });
-};
 
 // Public: Get reviews for product
 router.get('/product/:idOrSlug', getProductReviews);

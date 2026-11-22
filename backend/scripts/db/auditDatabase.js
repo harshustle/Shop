@@ -4,7 +4,8 @@ const mongoose = require('mongoose');
 async function audit() {
   const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/shop';
   await mongoose.connect(uri);
-  console.log('Connected to MongoDB at:', uri);
+  const safeUri = uri.replace(/\/\/([^:@/]+):([^@/]+)@/, '//***:***@');
+  console.log('Connected to MongoDB at:', safeUri);
 
   const collections = await mongoose.connection.db.listCollections().toArray();
   console.log('\n=== REAL DATABASE AUDIT (shop) ===');

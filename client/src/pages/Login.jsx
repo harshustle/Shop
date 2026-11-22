@@ -27,16 +27,12 @@ import {
   confirmFirebaseOtp 
 } from '../firebase';
 import { useTheme } from '../context/ThemeContext';
+import { saveTokenPair } from '../utils/authSession';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { theme, setTheme } = useTheme();
-
-  // Check existing session info
-  const currentToken = localStorage.getItem('token');
-  const currentRole = localStorage.getItem('role');
-  const currentName = localStorage.getItem('fullName') || (currentRole === 'admin' ? 'Admin' : 'Customer');
 
   // Form Inputs
   const [phone, setPhone] = useState('');
@@ -65,10 +61,10 @@ const Login = () => {
 
   // Helper to persist auth state and redirect
   const handleAuthSuccess = (data, identifier) => {
-    localStorage.setItem('token', data.token);
+    saveTokenPair(data);
     localStorage.setItem('role', data.role);
 
-    const displayName = data.user?.fullName || (data.role === 'admin' ? 'Harsh Srivastava' : 'Customer');
+    const displayName = data.user?.fullName || 'Customer';
     localStorage.setItem('fullName', displayName);
 
     if (data.user?.phone || identifier) {
@@ -245,7 +241,7 @@ const Login = () => {
         </Link>
 
         {/* 3-Theme Switcher */}
-        <div className="flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.08] p-0.5 rounded-full">
+        <div className="theme-selector flex items-center gap-1 bg-black/[0.04] dark:bg-white/[0.08] p-0.5 rounded-full">
           <button
             type="button"
             onClick={() => setTheme('white')}
@@ -292,22 +288,6 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Current Session Indicator */}
-        {currentToken && (
-          <div className="mb-4 p-3 bg-[#635BFF]/10 dark:bg-[#635BFF]/20 border border-[#635BFF]/30 rounded-2xl text-xs flex items-center justify-between gap-2 shadow-xs">
-            <span className="text-[var(--app-text-primary)]">
-              Signed in as <strong>{currentName}</strong> ({currentRole || 'user'})
-            </span>
-            <button
-              type="button"
-              onClick={() => navigate(currentRole === 'admin' ? '/admin' : '/')}
-              className="text-[#635BFF] dark:text-[#A59FFF] font-bold hover:underline shrink-0 cursor-pointer"
-            >
-              Go to {currentRole === 'admin' ? 'Dashboard' : 'Store'} &rarr;
-            </button>
-          </div>
-        )}
-
         {/* Global Feedback Notifications */}
         {infoMessage && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200/70 rounded-2xl text-xs text-amber-800 font-semibold flex items-center gap-2">
@@ -344,7 +324,7 @@ const Login = () => {
         </div>
 
         {/* Password Login Form */}
-        <form onSubmit={handlePasswordLogin} className="space-y-4">
+        <form onSubmit={handlePasswordLogin} className="space-y-4" autoComplete="off">
           
           {/* Registered phone input */}
           <div>
@@ -358,6 +338,8 @@ const Login = () => {
                 </div>
                 <input
                   type="tel"
+                  name="freshcart-login-phone"
+                  autoComplete="off"
                   required
                   placeholder="9876543210"
                   value={phone}
@@ -390,6 +372,8 @@ const Login = () => {
               <Lock size={16} className="absolute left-3.5 top-3.5 text-slate-400" />
               <input
                 type={showPassword ? 'text' : 'password'}
+                name="freshcart-login-password"
+                autoComplete="new-password"
                 required
                 placeholder="Enter your account password"
                 value={password}

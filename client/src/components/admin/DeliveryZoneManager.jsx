@@ -22,6 +22,16 @@ import {
 } from 'lucide-react';
 import { API_URL } from '../../config';
 import { useAppDialog } from '../../context/AppDialogContext';
+import './DeliveryZoneManager.css';
+
+const BASTI_QUICK_PLACE = {
+  name: 'Basti Main',
+  address: 'Basti, Uttar Pradesh',
+  lat: 26.8028,
+  lng: 82.7634,
+  radiusKm: 5,
+  isEnabled: true
+};
 
 const DeliveryZoneManager = () => {
   const { showAlert, showConfirm } = useAppDialog();
@@ -29,10 +39,11 @@ const DeliveryZoneManager = () => {
   const [zoneId, setZoneId] = useState('');
   const [zoneName, setZoneName] = useState('Primary Delivery Zone');
   const [hubName, setHubName] = useState('FreshCart Central Dark Store');
-  const [hubAddress, setHubAddress] = useState('Tamkuhi Raj, Kushinagar, UP');
-  const [hubCoords, setHubCoords] = useState({ lat: 26.6924, lng: 84.2868 });
+  const [hubAddress, setHubAddress] = useState('Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001');
+  const [hubCoords, setHubCoords] = useState({ lat: 26.8028, lng: 82.7634 });
   const [estimatedMinutes, setEstimatedMinutes] = useState(15);
   const [isActive, setIsActive] = useState(true);
+  const [quickPlaces] = useState([BASTI_QUICK_PLACE]);
 
   // Polygon Vertices [[lat, lng], [lat, lng], ...]
   const [polygonPoints, setPolygonPoints] = useState([]);
@@ -84,7 +95,7 @@ const DeliveryZoneManager = () => {
         setZoneId(z._id || '');
         setZoneName(z.name || 'Primary Delivery Zone');
         setHubName(z.hubName || 'FreshCart Central Hub');
-        setHubAddress(z.hubAddress || 'Tamkuhi Raj, Kushinagar, UP');
+        setHubAddress(z.hubAddress || 'Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001');
         if (z.center) {
           setHubCoords({ lat: z.center.lat, lng: z.center.lng });
         }
@@ -137,8 +148,8 @@ const DeliveryZoneManager = () => {
         mapInstanceRef.current = null;
       }
 
-      const initialLat = hubCoords.lat || 26.6924;
-      const initialLng = hubCoords.lng || 84.2868;
+      const initialLat = hubCoords.lat || 26.8028;
+      const initialLng = hubCoords.lng || 82.7634;
 
       const map = L.map(mapContainerRef.current, {
         center: [initialLat, initialLng],
@@ -407,7 +418,22 @@ const DeliveryZoneManager = () => {
 
   // Save Delivery Zone Polygon to Backend
   const handleSaveDeliveryZone = async () => {
-    if (polygonPoints.length < 3) {
+    let pointsToSave = polygonPoints;
+
+    // Radius mode must always save the polygon represented by the current slider value.
+    if (toolMode === 'radius') {
+      const circle = turf.circle(
+        [Number(hubCoords.lng), Number(hubCoords.lat)],
+        Number(radiusKm),
+        { steps: 36, units: 'kilometers' }
+      );
+      pointsToSave = circle.geometry.coordinates[0]
+        .slice(0, -1)
+        .map((coordinate) => [coordinate[1], coordinate[0]]);
+      setPolygonPoints(pointsToSave);
+    }
+
+    if (pointsToSave.length < 3) {
       setErrorMessage('A polygon must have at least 3 vertices to enclose a delivery area.');
       return;
     }
@@ -418,7 +444,7 @@ const DeliveryZoneManager = () => {
 
     try {
       // Prepare GeoJSON Polygon with closed ring [[lng, lat], ...]
-      const ringCoords = polygonPoints.map(p => [p[1], p[0]]);
+      const ringCoords = pointsToSave.map(p => [p[1], p[0]]);
       ringCoords.push(ringCoords[0]); // Ensure closed loop
 
       const payload = {
@@ -433,7 +459,8 @@ const DeliveryZoneManager = () => {
         areaSqKm,
         radiusKm,
         isActive,
-        estimatedDeliveryMinutes: Number(estimatedMinutes)
+        estimatedDeliveryMinutes: Number(estimatedMinutes),
+        quickPlaces
       };
 
       const res = await fetch(`${API_URL}/api/delivery-zone/delivery-zone`, {
@@ -444,6 +471,7 @@ const DeliveryZoneManager = () => {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        setZoneId(data.zone?._id || '');
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 4000);
       } else {
@@ -457,11 +485,62 @@ const DeliveryZoneManager = () => {
     }
   };
 
+  const loadQuickPlace = async (place) => {
+    if (!place.isEnabled) return;
+    const center = { lat: Number(place.lat), lng: Number(place.lng) };
+    const placeRadius = Number(place.radiusKm) || 5;
+    const placeHubName = 'FreshCart Basti Main Hub';
+    const placeAddress = 'Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001';
+    const circle = turf.circle([center.lng, center.lat], placeRadius, { steps: 36, units: 'kilometers' });
+    const ring = circle.geometry.coordinates[0];
+    const points = ring.slice(0, ring.length - 1).map((coordinate) => [coordinate[1], coordinate[0]]);
+
+    setHubCoords(center);
+    setZoneName('Basti Express Delivery Zone');
+    setHubName(placeHubName);
+    setHubAddress(placeAddress);
+    setRadiusKm(placeRadius);
+    setIsActive(true);
+    setPolygonPoints(points);
+    mapInstanceRef.current?.flyTo([center.lat, center.lng], 13);
+    hubMarkerRef.current?.setLatLng([center.lat, center.lng]);
+
+    setIsSaving(true);
+    setSaveSuccess(false);
+    setErrorMessage('');
+    try {
+      const response = await fetch(`${API_URL}/api/delivery-zone/delivery-zone`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'Basti Express Delivery Zone',
+          hubName: placeHubName,
+          hubAddress: placeAddress,
+          center,
+          polygon: circle.geometry,
+          radiusKm: placeRadius,
+          isActive: true,
+          estimatedDeliveryMinutes: Number(estimatedMinutes),
+          quickPlaces: [BASTI_QUICK_PLACE]
+        })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Could not save Basti delivery zone.');
+      setZoneId(data.zone?._id || '');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 4000);
+    } catch (error) {
+      setErrorMessage(error.message || 'Could not save Basti delivery zone.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
-    <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 w-full max-w-full overflow-x-hidden">
+    <div className="delivery-zone-manager space-y-4 sm:space-y-6 animate-in fade-in duration-300 w-full max-w-full overflow-x-hidden">
       
       {/* Header & Sub-bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-6 rounded-3xl border border-slate-100 shadow-xs max-w-full overflow-hidden">
+      <div className="delivery-zone-commandbar flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 bg-white p-3.5 sm:p-6 rounded-3xl border border-slate-100 shadow-xs max-w-full overflow-hidden">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] sm:text-xs font-black uppercase tracking-wider mb-1.5">
             <ShieldCheck size={13} className="text-emerald-600" />
@@ -500,21 +579,21 @@ const DeliveryZoneManager = () => {
 
       {/* Notifications */}
       {saveSuccess && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-xs">
+        <div className="delivery-zone-message p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-xs">
           <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
           <span>Delivery Polygon saved! Only customers located within this polygon boundary can place orders now.</span>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-xs">
+        <div className="delivery-zone-message p-3.5 sm:p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs sm:text-sm font-bold flex items-center gap-2.5 shadow-xs">
           <AlertCircle size={16} className="text-rose-600 shrink-0" />
           <span>{errorMessage}</span>
         </div>
       )}
 
       {/* Grid: Left Map + Controls, Right Parameters & Details */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      <div className="delivery-zone-grid grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
         
         {/* Left Column: Interactive Map Canvas */}
         <div className="lg:col-span-8 flex flex-col gap-3 sm:gap-4 max-w-full">
@@ -627,7 +706,7 @@ const DeliveryZoneManager = () => {
           </form>
 
           {/* Map Container */}
-          <div className="relative w-full h-[360px] sm:h-[460px] lg:h-[520px] rounded-3xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
+          <div className="delivery-zone-map relative w-full h-[360px] sm:h-[460px] lg:h-[520px] rounded-3xl overflow-hidden border border-slate-200 shadow-inner bg-slate-100">
             <div ref={mapContainerRef} className="w-full h-full z-0" />
 
             {/* Mode Guide Banner Floating on Map */}
@@ -741,7 +820,7 @@ const DeliveryZoneManager = () => {
         {/* Right Column: Zone Settings & Telemetry */}
         <div className="lg:col-span-4 space-y-4">
           
-          <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-xs space-y-5">
+          <div className="delivery-zone-spec-card bg-white p-6 rounded-3xl border border-slate-100 shadow-xs space-y-5">
             <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
               <Navigation size={18} className="text-[#00B074]" />
               <span>Zone Specifications</span>
@@ -757,7 +836,7 @@ const DeliveryZoneManager = () => {
                 value={zoneName}
                 onChange={(e) => setZoneName(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#00B074] focus:outline-hidden"
-                placeholder="e.g. Kushinagar Express Area"
+                placeholder="e.g. Basti Express Delivery Zone"
               />
             </div>
 
@@ -771,7 +850,7 @@ const DeliveryZoneManager = () => {
                 value={hubName}
                 onChange={(e) => setHubName(e.target.value)}
                 className="w-full px-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-bold text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#00B074] focus:outline-hidden"
-                placeholder="e.g. Tamkuhi Raj Central Hub"
+                placeholder="e.g. FreshCart Basti Main Hub"
               />
             </div>
 
@@ -785,7 +864,7 @@ const DeliveryZoneManager = () => {
                 onChange={(e) => setHubAddress(e.target.value)}
                 rows={2}
                 className="w-full px-4 py-2 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-semibold text-slate-800 focus:bg-white focus:ring-2 focus:ring-[#00B074] focus:outline-hidden resize-none"
-                placeholder="NH28, Tamkuhi Raj, Kushinagar, UP"
+                placeholder="Gandhi Nagar, Company Bagh, Basti, UP 272001"
               />
             </div>
 
@@ -839,48 +918,25 @@ const DeliveryZoneManager = () => {
           </div>
 
           {/* Quick presets for common locations */}
-          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-xs space-y-3">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">Quick Area Presets</h4>
-            
-            <button
-              type="button"
-              onClick={() => {
-                setHubCoords({ lat: 26.6924, lng: 84.2868 });
-                setHubName('FreshCart Tamkuhi Raj Hub');
-                setHubAddress('NH28, Tamkuhi Raj, Kushinagar, UP - 274407');
-                generateRadiusPolygon(26.6924, 84.2868, 5);
-                if (mapInstanceRef.current) mapInstanceRef.current.flyTo([26.6924, 84.2868], 13);
-              }}
-              className="w-full p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 text-left transition flex items-center justify-between"
-            >
-              <div>
-                <div className="text-xs font-bold text-slate-800">Tamkuhi Raj Hub (5 km)</div>
-                <div className="text-[11px] text-slate-400">NH28, Kushinagar, UP</div>
-              </div>
-              <span className="text-xs font-black text-[#00B074]">Load</span>
-            </button>
+          <div className="delivery-quick-places bg-white p-5 rounded-3xl border border-slate-100 shadow-xs space-y-3">
+            <div className="delivery-quick-places__heading">
+              <h4>Quick Places</h4>
+              <span>Basti delivery hub</span>
+            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                setHubCoords({ lat: 26.7820, lng: 84.3410 });
-                setHubName('FreshCart Sewarahi Hub');
-                setHubAddress('Station Road, Sewarahi, Kushinagar, UP - 274406');
-                generateRadiusPolygon(26.7820, 84.3410, 5);
-                if (mapInstanceRef.current) mapInstanceRef.current.flyTo([26.7820, 84.3410], 13);
-              }}
-              className="w-full p-3 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/40 text-left transition flex items-center justify-between"
-            >
-              <div>
-                <div className="text-xs font-bold text-slate-800">Sewarahi Hub (5 km)</div>
-                <div className="text-[11px] text-slate-400">Station Road, Kushinagar, UP</div>
+            <div className="delivery-quick-place-list">
+              <div className="delivery-quick-place">
+                <button type="button" className="delivery-quick-place__load" disabled={isSaving} onClick={() => loadQuickPlace(BASTI_QUICK_PLACE)}>
+                  <strong>Basti Main (5 km)</strong>
+                  <span>Basti, Uttar Pradesh · 26.8028, 82.7634</span>
+                </button>
+                <button type="button" className="delivery-quick-place__open" disabled={isSaving} onClick={() => loadQuickPlace(BASTI_QUICK_PLACE)}>{isSaving ? 'Saving...' : 'Load & Save'}</button>
               </div>
-              <span className="text-xs font-black text-[#00B074]">Load</span>
-            </button>
+            </div>
           </div>
 
           {/* Info Card */}
-          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 text-xs space-y-1.5">
+          <div className="delivery-zone-info p-4 rounded-2xl bg-slate-50 border border-slate-200 text-slate-600 text-xs space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold text-slate-800">
               <Info size={14} className="text-[#00B074]" />
               <span>How Geofencing Works</span>

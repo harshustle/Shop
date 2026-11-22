@@ -83,7 +83,9 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
     if (!isOpen) return;
     const fetchZone = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/delivery-zone/delivery-zone`);
+        const res = await fetch(`${API_URL}/api/delivery-zone/delivery-zone?fresh=${Date.now()}`, {
+          cache: 'no-store'
+        });
         const data = await res.json();
         if (data.success && data.zone) {
           setActiveZone(data.zone);
@@ -173,7 +175,7 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
         mapInstanceRef.current = null;
       }
 
-      const initialArea = SERVICE_AREAS[activeArea] || SERVICE_AREAS['TAMKUHI RAJ'];
+      const initialArea = SERVICE_AREAS[activeArea] || SERVICE_AREAS['BASTI'];
       const initialLat = currentCoords.lat || initialArea.lat;
       const initialLng = currentCoords.lng || initialArea.lng;
 
@@ -266,7 +268,7 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
     }
   }, [activeZone, checkDeliverability, currentCoords.lat, currentCoords.lng]);
 
-  // Switch between TAMKUHI RAJ & SEWARAHI
+  // Center the map on the selected Basti service area.
   const handleSelectArea = (areaKey) => {
     setActiveArea(areaKey);
     const target = SERVICE_AREAS[areaKey];
@@ -318,6 +320,11 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
   // Step 1: Confirm Location on Map -> Instantly save Basti location and close
   const handleProceedToDetails = () => {
     const areaObj = SERVICE_AREAS['BASTI'];
+    const locationIsDeliverable = checkDeliverability(currentCoords.lat, currentCoords.lng, activeZone);
+    if (!locationIsDeliverable) {
+      setErrorMessage('Selected location is outside the active Basti delivery zone.');
+      return;
+    }
     const fullDeliveryLocation = {
       tag: 'Home',
       title: currentTitle || areaObj.title,
@@ -332,9 +339,9 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
       city: areaObj.city,
       state: areaObj.state,
       postalCode: areaObj.postalCode,
-      isDeliverable: true,
+      isDeliverable: locationIsDeliverable,
       distanceKm: distanceKm || 0.5,
-      etaMinutes: 10
+      etaMinutes: distanceKm <= 2 ? 10 : distanceKm <= 4 ? 12 : 15
     };
 
     setLocation(fullDeliveryLocation);
@@ -368,7 +375,12 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    const areaObj = SERVICE_AREAS[activeArea] || SERVICE_AREAS['TAMKUHI RAJ'];
+    const areaObj = SERVICE_AREAS[activeArea] || SERVICE_AREAS['BASTI'];
+    const locationIsDeliverable = checkDeliverability(currentCoords.lat, currentCoords.lng, activeZone);
+    if (!locationIsDeliverable) {
+      setErrorMessage('Selected location is outside the active Basti delivery zone.');
+      return;
+    }
 
     const fullDeliveryLocation = {
       tag: 'Home',
@@ -384,9 +396,9 @@ const LocationPickerModal = ({ isOpen, onClose }) => {
       city: areaObj.city,
       state: areaObj.state,
       postalCode: areaObj.postalCode,
-      isDeliverable: isDeliverable,
+      isDeliverable: locationIsDeliverable,
       distanceKm: distanceKm || 0.5,
-      etaMinutes: isDeliverable ? (distanceKm <= 2 ? 10 : distanceKm <= 4 ? 12 : 15) : null
+      etaMinutes: distanceKm <= 2 ? 10 : distanceKm <= 4 ? 12 : 15
     };
 
     // Save in Cart Context and local storage

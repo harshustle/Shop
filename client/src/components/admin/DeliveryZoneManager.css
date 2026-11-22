@@ -1,0 +1,342 @@
+.delivery-zone-manager {
+  --zone-ink: #08090c;
+  --zone-yellow: #ffd400;
+  --zone-line: #d7d7d2;
+}
+
+.delivery-quick-places__heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.delivery-quick-places__heading h4 {
+  color: var(--zone-ink);
+  font-size: 0.75rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.delivery-quick-places__heading span {
+  color: #64748b;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.delivery-quick-place-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.delivery-quick-place-form input {
+  min-width: 0;
+  height: 2.15rem;
+  padding: 0 0.55rem;
+  border: 1px solid var(--zone-line);
+  background: #f7f7f3;
+  color: var(--zone-ink);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.delivery-quick-place-form button {
+  display: inline-flex;
+  min-height: 2.15rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border: 1px solid var(--zone-ink);
+  background: var(--zone-yellow);
+  color: var(--zone-ink);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.delivery-quick-place-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.delivery-quick-place {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  border: 1px solid var(--zone-line);
+  background: #fff;
+}
+
+.delivery-quick-place.is-disabled {
+  background: #f1f1ed;
+  opacity: 0.68;
+}
+
+.delivery-quick-place__load {
+  min-width: 0;
+  padding: 0.5rem 0.6rem;
+  text-align: left;
+}
+
+.delivery-quick-place__load strong,
+.delivery-quick-place__load span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.delivery-quick-place__load strong {
+  color: var(--zone-ink);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.delivery-quick-place__load span {
+  margin-top: 0.1rem;
+  color: #64748b;
+  font-size: 0.62rem;
+}
+
+.delivery-quick-place__toggle,
+.delivery-quick-place__open {
+  padding: 0 0.55rem;
+  border-left: 1px solid var(--zone-line);
+  color: #166534;
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.delivery-quick-place.is-disabled .delivery-quick-place__toggle {
+  color: #9f1239;
+}
+
+.delivery-quick-place__delete {
+  display: grid;
+  place-items: center;
+  border-left: 1px solid var(--zone-line);
+  color: #e11d48;
+}
+
+@media (max-width: 1023px) {
+  .delivery-zone-main {
+    min-height: calc(100dvh - 72px);
+    overflow-x: hidden;
+    padding: 0.75rem !important;
+    padding-bottom: 5rem !important;
+  }
+
+  .delivery-zone-manager {
+    gap: 0.75rem !important;
+  }
+
+  .delivery-zone-commandbar {
+    padding: 0.85rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-commandbar h1 {
+    font-size: 1rem !important;
+  }
+
+  .delivery-zone-commandbar p,
+  .delivery-zone-commandbar > div:first-child > div:first-child {
+    display: none;
+  }
+
+  .delivery-zone-grid {
+    gap: 0.75rem !important;
+  }
+
+  .delivery-zone-map {
+    height: min(46dvh, 360px) !important;
+    min-height: 270px;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-spec-card,
+  .delivery-quick-places,
+  .delivery-zone-info {
+    padding: 0.85rem !important;
+    border-radius: 0 !important;
+  }
+}
+
+@media (max-width: 639px) {
+  .delivery-zone-commandbar > div:last-child {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .delivery-zone-grid > div:first-child > div:first-child {
+    align-items: stretch;
+    padding: 0.45rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-grid > div:first-child > div:first-child > div:first-child {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .delivery-zone-map {
+    height: 300px !important;
+  }
+
+  .delivery-zone-spec-card {
+    padding: 0.75rem !important;
+  }
+
+  .delivery-zone-spec-card input,
+  .delivery-zone-spec-card textarea,
+  .delivery-zone-spec-card button {
+    border-radius: 0 !important;
+  }
+
+  .delivery-quick-place {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .delivery-quick-place__open {
+    min-height: 2.4rem;
+    border-top: 1px solid var(--zone-line);
+    border-left: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .delivery-zone-main {
+    height: calc(100vh - 80px);
+    min-height: 0;
+    overflow: hidden;
+    padding: 0.75rem !important;
+  }
+
+  .delivery-zone-manager {
+    display: grid;
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    gap: 0.65rem !important;
+  }
+
+  .delivery-zone-commandbar {
+    display: none !important;
+  }
+
+  .delivery-zone-commandbar > div:first-child > div:first-child,
+  .delivery-zone-commandbar p {
+    display: none;
+  }
+
+  .delivery-zone-commandbar h1 {
+    font-size: 1.05rem !important;
+  }
+
+  .delivery-zone-grid {
+    height: 100%;
+    min-height: 0;
+    gap: 0.75rem !important;
+  }
+
+  .delivery-zone-grid > div:first-child {
+    height: 100%;
+    min-height: 0;
+    gap: 0.55rem !important;
+  }
+
+  .delivery-zone-grid > div:first-child > div:first-child {
+    padding: 0.45rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-grid form {
+    gap: 0.4rem;
+  }
+
+  .delivery-zone-map {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 1 1 auto;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-grid > div:last-child {
+    display: grid;
+    align-content: start;
+    gap: 0.65rem !important;
+    min-height: 0;
+  }
+
+  .delivery-zone-spec-card {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem !important;
+    padding: 0.75rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-spec-card > h3,
+  .delivery-zone-spec-card > div:nth-of-type(3),
+  .delivery-zone-spec-card > div:nth-of-type(5),
+  .delivery-zone-spec-card > button {
+    grid-column: 1 / -1;
+  }
+
+  .delivery-zone-spec-card h3 {
+    font-size: 0.9rem !important;
+  }
+
+  .delivery-zone-spec-card label {
+    margin-bottom: 0.25rem !important;
+    font-size: 0.62rem !important;
+  }
+
+  .delivery-zone-spec-card input,
+  .delivery-zone-spec-card textarea {
+    min-height: 2.15rem;
+    padding: 0.45rem 0.6rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-spec-card textarea {
+    height: 2.45rem;
+  }
+
+  .delivery-zone-spec-card > div:nth-of-type(5) {
+    padding: 0.55rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-zone-spec-card > button {
+    min-height: 2.35rem;
+    padding: 0.5rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-quick-places {
+    padding: 0.75rem !important;
+    border-radius: 0 !important;
+  }
+
+  .delivery-quick-place-form {
+    grid-template-columns: 1.2fr 1.2fr 0.8fr 0.8fr 0.65fr auto;
+  }
+
+  .delivery-quick-place-list {
+    overflow: hidden;
+  }
+
+  .delivery-zone-info {
+    display: none;
+  }
+
+  .delivery-zone-message {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 500;
+    max-width: 420px;
+  }
+}
+

@@ -26,7 +26,7 @@ const MobileNotchBar = () => {
         {/* Right: Cellular, Wifi, Battery + Compact Theme Switcher */}
         <div className="flex items-center gap-2.5">
           {/* 3-Theme Quick Switcher */}
-          <div className="flex items-center gap-1 bg-black/5 dark:bg-white/10 p-0.5 rounded-full border border-black/5 dark:border-white/10">
+          <div className="theme-selector flex items-center gap-1 bg-black/5 dark:bg-white/10 p-0.5 rounded-full border border-black/5 dark:border-white/10">
             <button
               type="button"
               onClick={() => setTheme('white')}

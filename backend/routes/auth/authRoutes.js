@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const loginRateLimit = require('../../middleware/loginRateLimit');
 const { 
     login, 
     register, 
@@ -19,7 +20,7 @@ const {
     verifyGooglePhoneOtp
 } = require('../../controllers/auth/authController');
 
-router.post('/login', login);
+router.post('/login', loginRateLimit, login);
 router.post('/register', register);
 router.post('/signup/send-otp', sendSignupOtp);
 router.post('/google', googleAuth);
@@ -34,8 +35,8 @@ router.post('/change-password', auth, changePassword);
 router.post('/firebase-login', firebasePhoneLogin);
 
 // OTP Direct Login (Phone SMS or Email Dispatch)
-router.post('/otp/send', sendLoginOtp);
-router.post('/otp/verify', verifyLoginOtp);
+router.post('/otp/send', loginRateLimit, sendLoginOtp);
+router.post('/otp/verify', loginRateLimit, verifyLoginOtp);
 
 // OTP Password Reset (SuperAdmin & Customer)
 router.post('/send-otp', sendPasswordResetOtp);

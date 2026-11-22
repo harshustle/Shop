@@ -9,6 +9,8 @@ const mongoose = require('mongoose');
 
 const PROFILE_TTL = 7 * 24 * 60 * 60; // 7 days
 const OTP_TTL = 10 * 60; // 10 minutes
+const SUPER_ADMIN_PHONE = (process.env.SUPER_ADMIN_PHONE || '9161955178').replace(/\D/g, '').slice(-10);
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL || 'harshustle@gmail.com').trim().toLowerCase();
 
 /**
  * Phase 1 Core Authentication: Login
@@ -36,6 +38,13 @@ const login = async (req, res) => {
 
         if (user.isActive === false) {
             return res.status(403).json({ error: 'Account suspended: Please contact store administrator' });
+        }
+
+        // The admin role is valid for exactly one store-owner phone. This also
+        // blocks stale admin records and prevents a normal account from using it.
+        if ((user.role === 'admin' && targetPhone !== SUPER_ADMIN_PHONE)
+            || (targetPhone === SUPER_ADMIN_PHONE && user.role !== 'admin')) {
+            return res.status(403).json({ error: 'Administrative account is not correctly provisioned' });
         }
 
         const isMatch = await user.comparePassword(password);
@@ -166,6 +175,9 @@ const register = async (req, res) => {
                     error: 'Validation failed: Please enter a valid 10-digit Indian mobile number starting with 6-9' 
                 });
             }
+            if (cleanPhone === SUPER_ADMIN_PHONE) {
+                return res.status(403).json({ error: 'This mobile number is reserved for the store owner and cannot be registered publicly' });
+            }
             const existingPhone = await User.findOne({ phone: cleanPhone });
             if (existingPhone) {
                 return res.status(409).json({ error: 'Account already exists: Mobile number is already registered' });
@@ -176,6 +188,9 @@ const register = async (req, res) => {
             cleanEmail = email.trim().toLowerCase();
             if (!/^\S+@\S+\.\S+$/.test(cleanEmail)) {
                 return res.status(400).json({ error: 'Validation failed: Please enter a valid email address' });
+            }
+            if (cleanEmail === SUPER_ADMIN_EMAIL) {
+                return res.status(403).json({ error: 'This email address is reserved for the store owner and cannot be registered publicly' });
             }
             const existingEmail = await User.findOne({ email: cleanEmail });
             if (existingEmail) {
@@ -203,15 +218,13 @@ const register = async (req, res) => {
             return res.status(400).json({ error: 'Verification code (OTP) is required for signup' });
         }
 
-        const assignedRole = (cleanPhone === '9161955178' || cleanEmail === 'harshustle@gmail.com') ? 'admin' : 'customer';
-
         // Create User
         const newUser = await User.create({
             phone: cleanPhone || undefined,
             email: cleanEmail || undefined,
             fullName: displayName,
             password: password,
-            role: assignedRole,
+            role: 'customer',
             isActive: true,
             isPhoneVerified: isOtpValid || Boolean(firebaseIdToken),
             isEmailVerified: false,
@@ -349,6 +362,9 @@ const sendPasswordResetOtp = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: 'No account found with this mobile number or email' });
         }
+        if (user.role === 'admin' || user.phone === SUPER_ADMIN_PHONE || user.email === SUPER_ADMIN_EMAIL) {
+            return res.status(403).json({ error: 'Admin password recovery is disabled. Use the secured server-side recovery process.' });
+        }
 
         // Generate 6-digit numeric OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -443,6 +459,9 @@ const verifyOtpAndResetPassword = async (req, res) => {
         const user = await User.findOne(query);
         if (!user) {
             return res.status(404).json({ error: 'User account not found' });
+        }
+        if (user.role === 'admin' || user.phone === SUPER_ADMIN_PHONE || user.email === SUPER_ADMIN_EMAIL) {
+            return res.status(403).json({ error: 'Admin password cannot be reset through public OTP recovery' });
         }
 
         // Verify against Redis keys
@@ -793,6 +812,9 @@ const sendLoginOtp = async (req, res) => {
             if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
                 return res.status(400).json({ error: 'Please enter a valid 10-digit Indian mobile number starting with 6-9' });
             }
+            if (cleanPhone === SUPER_ADMIN_PHONE) {
+                return res.status(403).json({ error: 'Store owner must sign in with the admin password' });
+            }
 
             const redisKey = `otp:auth:phone:${cleanPhone}`;
             await RedisService.set(redisKey, otp, OTP_TTL);
@@ -875,6 +897,9 @@ const verifyLoginOtp = async (req, res) => {
 
         if (phone) {
             const cleanPhone = phone.toString().trim().replace(/\D/g, '').slice(-10);
+            if (cleanPhone === SUPER_ADMIN_PHONE) {
+                return res.status(403).json({ error: 'Store owner must sign in with the admin password' });
+            }
             redisKey = `otp:auth:phone:${cleanPhone}`;
             const cachedOtp = await RedisService.get(redisKey);
 
@@ -885,34 +910,17 @@ const verifyLoginOtp = async (req, res) => {
             // Valid OTP: delete ephemeral key from Redis
             await RedisService.del(redisKey);
 
-            // Special SuperAdmin check: If phone is 9161955178, ensure role is admin
-            if (cleanPhone === '9161955178') {
-                user = await User.findOne({ phone: cleanPhone });
-                if (!user) {
-                    user = await User.create({
-                        phone: '9161955178',
-                        email: 'admin@shop.local',
-                        fullName: 'Super Admin',
-                        password: crypto.randomBytes(16).toString('hex'),
-                        role: 'admin',
-                        isPhoneVerified: true
-                    });
-                } else {
-                    user.role = 'admin';
-                }
-            } else {
-                user = await User.findOne({ phone: cleanPhone });
-                if (!user) {
-                    // Auto-create customer account
-                    user = await User.create({
-                        phone: cleanPhone,
-                        fullName: `User ${cleanPhone.slice(-4)}`,
-                        password: crypto.randomBytes(16).toString('hex'),
-                        role: 'customer',
-                        isPhoneVerified: true,
-                        isActive: true
-                    });
-                }
+            user = await User.findOne({ phone: cleanPhone });
+            if (!user) {
+                // Auto-create customer account
+                user = await User.create({
+                    phone: cleanPhone,
+                    fullName: `User ${cleanPhone.slice(-4)}`,
+                    password: crypto.randomBytes(16).toString('hex'),
+                    role: 'customer',
+                    isPhoneVerified: true,
+                    isActive: true
+                });
             }
         } else if (email) {
             const cleanEmail = email.toString().trim().toLowerCase();
@@ -986,37 +994,22 @@ const firebasePhoneLogin = async (req, res) => {
             return res.status(400).json({ error: 'Invalid 10-digit mobile number' });
         }
 
-        // Special SuperAdmin check
-        let user = null;
-        if (cleanPhone === '9161955178') {
-            user = await User.findOne({ phone: cleanPhone });
-            if (!user) {
-                user = await User.create({
-                    phone: '9161955178',
-                    email: 'admin@shop.local',
-                    fullName: 'Super Admin',
-                    password: crypto.randomBytes(16).toString('hex'),
-                    role: 'admin',
-                    isPhoneVerified: true
-                });
-            } else {
-                user.role = 'admin';
-                user.isPhoneVerified = true;
-            }
+        if (cleanPhone === SUPER_ADMIN_PHONE) {
+            return res.status(403).json({ error: 'Store owner must sign in with the admin password' });
+        }
+
+        let user = await User.findOne({ phone: cleanPhone });
+        if (!user) {
+            user = await User.create({
+                phone: cleanPhone,
+                fullName: `User ${cleanPhone.slice(-4)}`,
+                password: crypto.randomBytes(16).toString('hex'),
+                role: 'customer',
+                isPhoneVerified: true,
+                isActive: true
+            });
         } else {
-            user = await User.findOne({ phone: cleanPhone });
-            if (!user) {
-                user = await User.create({
-                    phone: cleanPhone,
-                    fullName: `User ${cleanPhone.slice(-4)}`,
-                    password: crypto.randomBytes(16).toString('hex'),
-                    role: 'customer',
-                    isPhoneVerified: true,
-                    isActive: true
-                });
-            } else {
-                user.isPhoneVerified = true;
-            }
+            user.isPhoneVerified = true;
         }
 
         if (user.isActive === false) {

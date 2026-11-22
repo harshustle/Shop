@@ -316,16 +316,16 @@ router.get('/delivery-zone', async (req, res) => {
     try {
         let zone = await DeliveryZone.findOne({ isActive: true }).sort({ updatedAt: -1 });
         if (!zone) {
-            // Seed a default polygon for Tamkuhi Raj (center [84.2868, 26.6924], radius 5km)
-            const defaultCenter = { lat: 26.6924, lng: 84.2868 };
+            // Seed the default Basti delivery polygon (5 km from Gandhi Nagar).
+            const defaultCenter = { lat: 26.8028, lng: 82.7634 };
             const defaultCircle = turf.circle([defaultCenter.lng, defaultCenter.lat], 5, {
                 steps: 32,
                 units: 'kilometers'
             });
             zone = await DeliveryZone.create({
-                name: 'Tamkuhi Raj & Surrounding Express Zone',
-                hubName: 'FreshCart Tamkuhi Raj Hub',
-                hubAddress: 'NH28, Tamkuhi Raj, Kushinagar, UP - 274407',
+                name: 'Basti Express Delivery Zone',
+                hubName: 'FreshCart Basti Main Hub',
+                hubAddress: 'Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001',
                 center: defaultCenter,
                 polygon: defaultCircle.geometry,
                 areaSqKm: parseFloat((turf.area(defaultCircle) / 1000000).toFixed(2)),
@@ -333,8 +333,7 @@ router.get('/delivery-zone', async (req, res) => {
                 isActive: true,
                 estimatedDeliveryMinutes: 12,
                 quickPlaces: [
-                    { name: 'Tamkuhi Raj Hub', address: 'NH28, Kushinagar, UP', lat: 26.6924, lng: 84.2868, radiusKm: 5, isEnabled: true },
-                    { name: 'Sewarahi Hub', address: 'Station Road, Kushinagar, UP', lat: 26.7820, lng: 84.3410, radiusKm: 5, isEnabled: true }
+                    { name: 'Basti Main', address: 'Basti, Uttar Pradesh', lat: 26.8028, lng: 82.7634, radiusKm: 5, isEnabled: true }
                 ]
             });
         }
@@ -388,7 +387,7 @@ router.post('/delivery-zone', async (req, res) => {
                     lng: parseFloat(centroid.geometry.coordinates[0].toFixed(5))
                 };
             } catch (e) {
-                calcCenter = { lat: 26.6924, lng: 84.2868 };
+                calcCenter = { lat: 26.8028, lng: 82.7634 };
             }
         }
 

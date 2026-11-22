@@ -13,11 +13,11 @@ const DeliveryZoneSchema = new mongoose.Schema({
     },
     hubAddress: {
         type: String,
-        default: 'Tamkuhi Raj, Kushinagar, UP'
+        default: 'Gandhi Nagar, Company Bagh, Basti, Uttar Pradesh, 272001'
     },
     center: {
-        lat: { type: Number, required: true, default: 26.6924 },
-        lng: { type: Number, required: true, default: 84.2868 }
+        lat: { type: Number, required: true, default: 26.8028 },
+        lng: { type: Number, required: true, default: 82.7634 }
     },
     polygon: {
         type: {

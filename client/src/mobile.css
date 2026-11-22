@@ -1,0 +1,131 @@
+/* Shared phone UX layer. Page-specific desktop layouts remain untouched. */
+html {
+  min-width: 320px;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  overscroll-behavior-y: none;
+}
+
+#root,
+.app-shell,
+#main-content {
+  width: 100%;
+  min-width: 0;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+@media (max-width: 767px) {
+  html {
+    scroll-padding-top: 72px;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+
+  /* Prevent iOS Safari from zooming into fields. */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    max-width: 100%;
+  }
+
+  h1,
+  h2,
+  h3,
+  p,
+  td,
+  th {
+    overflow-wrap: anywhere;
+  }
+
+  /* Horizontal rails stay usable without showing an intrusive scrollbar. */
+  .overflow-x-auto {
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .overflow-x-auto::-webkit-scrollbar {
+    display: none;
+  }
+
+  .overflow-x-auto > * {
+    scroll-snap-align: start;
+  }
+
+  /* All dialog surfaces remain reachable on short phones and respect notches. */
+  .fixed.inset-0.flex.items-center.justify-center {
+    padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .fixed.inset-0.flex.items-center.justify-center > div,
+  .fixed.inset-0.flex.items-center.justify-center > section,
+  .fixed.inset-0.flex.items-center.justify-center > form {
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+    overflow-y: auto;
+  }
+
+  /* Storefront pages reserve space for the floating mobile dock and home bar. */
+  .app-shell:not(.app-route-admin):not(.app-route-login):not(.app-route-register) {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+
+  .app-route-login,
+  .app-route-register {
+    min-height: 100dvh;
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .app-route-login #main-content,
+  .app-route-register #main-content {
+    min-height: 100dvh;
+  }
+}
+
+@media (max-width: 420px) {
+  .app-shell:not(.app-route-admin) main {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+@media (max-height: 680px) and (max-width: 767px) {
+  .fixed.inset-0.flex.items-center.justify-center {
+    align-items: flex-end !important;
+  }
+}
