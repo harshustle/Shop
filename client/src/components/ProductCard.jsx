@@ -59,7 +59,7 @@ const ProductCard = ({ product }) => {
     <div className="group bg-[var(--app-card)] rounded-2xl sm:rounded-3xl p-3 sm:p-3.5 border border-black/[0.06] dark:border-white/[0.08] hover:border-[#635BFF]/30 hover:shadow-md transition-all flex flex-col justify-between relative">
       
       {/* Product Image */}
-      <div className="relative w-full aspect-square bg-black/[0.02] dark:bg-white/[0.04] rounded-xl sm:rounded-2xl overflow-hidden mb-2 p-2 flex items-center justify-center">
+      <div className="product-card-media relative w-full aspect-square md:aspect-auto md:h-44 xl:h-40 bg-black/[0.02] dark:bg-white/[0.04] rounded-xl sm:rounded-2xl overflow-hidden mb-2 p-2 flex items-center justify-center">
         
         {/* Yellow Discount Pill */}
         {discountPercent > 0 && (
