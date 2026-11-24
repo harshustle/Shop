@@ -64,7 +64,8 @@ class InventoryService {
         });
 
         const totalHeld = holds.reduce((sum, h) => sum + h.quantity, 0);
-        return Math.max(0, found.variant.stockQuantity - totalHeld);
+        const physical = found.variant.stockOnHand ?? found.variant.stockQuantity ?? 0;
+        return Math.max(0, physical - totalHeld);
     }
 
     /**

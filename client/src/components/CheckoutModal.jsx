@@ -50,7 +50,8 @@ const CheckoutModal = ({ isOpen, onClose }) => {
     isCheckoutOpen,
     setIsCheckoutOpen,
     selectedLocation,
-    openLocationModal
+    openLocationModal,
+    publishRecentOrder
   } = useCart();
 
   const showModal = isOpen !== undefined ? isOpen : isCheckoutOpen;
@@ -120,6 +121,13 @@ const CheckoutModal = ({ isOpen, onClose }) => {
 
   if (!showModal) return null;
 
+  const finalizeSuccessfulOrder = async (result) => {
+    const placedOrder = result?.order || result;
+    setOrderSuccess(placedOrder);
+    publishRecentOrder(placedOrder);
+    await clearCart();
+  };
+
   const handleSubmitOrder = async (e) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.phone.trim() || !formData.address.trim()) {
@@ -187,8 +195,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
 
         const data = await res.json();
         if (res.ok) {
-          setOrderSuccess(data);
-          clearCart();
+          await finalizeSuccessfulOrder(data);
         } else {
           setError(data.error || 'Failed to place COD order');
         }
@@ -235,7 +242,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
             email: formData.email
           },
           theme: {
-            color: '#00B074'
+            color: '#FFD400'
           },
           handler: async (response) => {
             // Verify HMAC signature server-side
@@ -266,8 +273,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
 
               const verifyData = await verifyRes.json();
               if (verifyRes.ok) {
-                setOrderSuccess(verifyData.order);
-                clearCart();
+                await finalizeSuccessfulOrder(verifyData.order);
               } else {
                 setError(verifyData.error || 'Payment verification failed');
               }
@@ -314,8 +320,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
 
         const verifyData = await verifyRes.json();
         if (verifyRes.ok) {
-          setOrderSuccess(verifyData.order);
-          clearCart();
+          await finalizeSuccessfulOrder(verifyData.order);
         } else {
           setError(verifyData.error || 'Order placement failed');
         }
@@ -336,7 +341,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
       />
 
       <div className="flex min-h-full items-center justify-center p-3 sm:p-4">
-        <div className="relative w-full max-w-md bg-[#FBFBFE] rounded-[32px] shadow-2xl border border-slate-100 p-5 sm:p-6 z-10 animate-in zoom-in-95 duration-200">
+        <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl border border-slate-200 p-5 sm:p-6 z-10 animate-in zoom-in-95 duration-200">
           
           {/* SUCCESS SCREEN */}
           {orderSuccess ? (
@@ -527,20 +532,23 @@ const CheckoutModal = ({ isOpen, onClose }) => {
               )}
 
               {/* Payment Card (VISA style matching Screen 1) */}
-              <div className="space-y-2 pt-1">
-                <div className="grid grid-cols-2 gap-2 text-xs">
+              <fieldset className="space-y-2.5 border-t border-slate-200 pt-4">
+                <legend className="px-1 text-sm font-black text-slate-900">Choose payment method</legend>
+                <p className="px-1 text-[11px] font-medium text-slate-500">Select one option to complete your order.</p>
+                <div className="grid gap-2 text-xs sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, paymentMethod: 'razorpay' })}
-                    className={`p-3 rounded-2xl border transition flex items-center justify-between ${
+                    aria-pressed={formData.paymentMethod === 'razorpay'}
+                    className={`min-h-16 p-3 border transition flex items-center justify-between ${
                       formData.paymentMethod === 'razorpay'
-                        ? 'bg-white border-slate-200 shadow-2xs text-slate-900 ring-2 ring-[#635BFF]/30'
-                        : 'bg-[#F4F4F8] border-transparent text-slate-400'
+                        ? 'bg-[#FFF8CC] border-slate-900 text-slate-900 ring-1 ring-slate-900'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="font-black italic tracking-wider text-base text-[#1A1F71]">VISA</span>
-                      <span className="text-[10px] font-bold text-slate-400">/ UPI</span>
+                      <CreditCard size={17} className="shrink-0" />
+                      <span className="text-left"><strong className="block font-black">Pay online</strong><small className="block text-[9px] font-medium text-slate-500">UPI, card or net banking</small></span>
                     </div>
                     <span className="font-black text-xs text-slate-900">₹{grandTotal.toFixed(0)}</span>
                   </button>
@@ -548,20 +556,21 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, paymentMethod: 'cod' })}
-                    className={`p-3 rounded-2xl border transition flex items-center justify-between ${
+                    aria-pressed={formData.paymentMethod === 'cod'}
+                    className={`min-h-16 p-3 border transition flex items-center justify-between ${
                       formData.paymentMethod === 'cod'
-                        ? 'bg-white border-slate-200 shadow-2xs text-slate-900 ring-2 ring-[#635BFF]/30'
-                        : 'bg-[#F4F4F8] border-transparent text-slate-400'
+                        ? 'bg-[#FFF8CC] border-slate-900 text-slate-900 ring-1 ring-slate-900'
+                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
                     }`}
                   >
                     <div className="flex items-center gap-1.5">
-                      <Banknote size={16} className="text-amber-600 shrink-0" />
-                      <span className="font-bold text-[11px]">Cash</span>
+                      <Banknote size={17} className="shrink-0" />
+                      <span className="text-left"><strong className="block font-black">Cash on delivery</strong><small className="block text-[9px] font-medium text-slate-500">Pay when order arrives</small></span>
                     </div>
                     <span className="font-black text-xs text-slate-900">₹{grandTotal.toFixed(0)}</span>
                   </button>
                 </div>
-              </div>
+              </fieldset>
 
               {/* Contact Details (Clean compact inputs) */}
               <div className="grid grid-cols-2 gap-2 pt-1">
@@ -607,7 +616,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full py-4 bg-[#635BFF] hover:bg-[#5248EE] active:scale-[0.99] text-white rounded-full font-black text-sm uppercase tracking-wide transition shadow-xl shadow-[#635BFF]/30 flex items-center justify-center gap-2.5 disabled:opacity-50"
+                  className="w-full py-4 bg-[#FFD400] hover:bg-[#F1C900] active:scale-[0.99] text-slate-950 border border-slate-950 font-black text-sm transition flex items-center justify-center gap-2.5 disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
@@ -617,7 +626,7 @@ const CheckoutModal = ({ isOpen, onClose }) => {
                   ) : (
                     <>
                       <CreditCard size={18} />
-                      <span>PAY</span>
+                      <span>{formData.paymentMethod === 'cod' ? 'Place COD order' : `Pay ₹${grandTotal.toFixed(0)} securely`}</span>
                     </>
                   )}
                 </button>

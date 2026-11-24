@@ -10,7 +10,8 @@ const redisService = require('../../services/cache/redisService');
  */
 const searchCatalog = async (req, res) => {
     try {
-        const cacheKey = `cache:catalog:search:${JSON.stringify(req.query || {})}`;
+        // Versioned key prevents stale stock snapshots from surviving a stock rebalance.
+        const cacheKey = `cache:catalog:v2:search:${JSON.stringify(req.query || {})}`;
         const cached = await redisService.get(cacheKey);
         if (cached) {
             return res.json(cached);

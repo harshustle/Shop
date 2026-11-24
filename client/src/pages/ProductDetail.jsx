@@ -23,14 +23,17 @@ import FreshCartNavbar from '../components/FreshCartNavbar';
 import FreshCartFooter from '../components/FreshCartFooter';
 import CartDrawer from '../components/CartDrawer';
 import CheckoutModal from '../components/CheckoutModal';
+import StorefrontPageSkeleton from '../components/StorefrontPageSkeleton';
 import { useCart } from '../context/CartContext';
 import { useAppDialog } from '../context/AppDialogContext';
 import { API_URL } from '../config';
+import { getAvailableStock } from '../utils/inventory';
+import { getSafeProductImage, PRODUCT_IMAGE_FALLBACK, useProductImageFallback } from '../utils/productImage';
 
 const ProductDetail = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, isCartOpen, setIsCartOpen } = useCart();
   const { showAlert } = useAppDialog();
 
   const [product, setProduct] = useState(null);
@@ -51,7 +54,6 @@ const ProductDetail = () => {
   const [reviewNotice, setReviewNotice] = useState('');
 
   // Cart & Checkout
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
@@ -63,7 +65,7 @@ const ProductDetail = () => {
           const data = await res.json();
           setProduct(data);
           if (data.variants && data.variants.length > 0) {
-            setSelectedVariant(data.variants[0]);
+            setSelectedVariant(data.variants.find((variant) => (getAvailableStock(variant, data) ?? 1) > 0) || data.variants[0]);
           }
 
           // Fetch reviews
@@ -92,13 +94,13 @@ const ProductDetail = () => {
   }, [slug]);
 
   const handleAddToCart = () => {
-    if (!product || !selectedVariant) return;
+    if (!product || !selectedVariant || (getAvailableStock(selectedVariant, product) ?? 0) <= 0) return;
     addToCart(product, selectedVariant, quantity);
     setIsCartOpen(true);
   };
 
   const handleBuyNow = () => {
-    if (!product || !selectedVariant) return;
+    if (!product || !selectedVariant || (getAvailableStock(selectedVariant, product) ?? 0) <= 0) return;
     addToCart(product, selectedVariant, quantity);
     setIsCheckoutOpen(true);
   };
@@ -153,15 +155,9 @@ const ProductDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans">
+      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col font-sans">
         <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-[#635BFF] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-xs font-bold text-slate-500">Loading Product Specifications...</p>
-          </div>
-        </div>
-        <FreshCartFooter />
+        <StorefrontPageSkeleton variant="detail" />
       </div>
     );
   }
@@ -187,12 +183,12 @@ const ProductDetail = () => {
 
   const galleryImages = (product.images && product.images.length > 0)
     ? product.images
-    : [{ imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80' }];
+    : [{ imageUrl: PRODUCT_IMAGE_FALLBACK }];
 
   const currentPrice = Number(selectedVariant?.price || product.basePrice || 0);
   const comparePrice = Number(selectedVariant?.compareAtPrice || currentPrice * 1.25);
   const discountPercent = Math.round(((comparePrice - currentPrice) / comparePrice) * 100);
-  const stockQty = selectedVariant?.stockQuantity ?? 50;
+  const stockQty = getAvailableStock(selectedVariant, product) ?? 0;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-800 flex flex-col font-sans">
@@ -231,9 +227,10 @@ const ProductDetail = () => {
           <div className="lg:col-span-6 space-y-4">
             <div className="w-full h-96 sm:h-[460px] rounded-[32px] bg-[#F4F4F8] flex items-center justify-center overflow-hidden border border-slate-100 relative group p-4">
               <img
-                src={galleryImages[selectedImageIdx]?.imageUrl}
+                src={getSafeProductImage(galleryImages[selectedImageIdx]?.imageUrl)}
                 alt={product.title}
                 className="w-full h-full object-contain group-hover:scale-105 transition duration-500"
+                onError={useProductImageFallback}
               />
               {discountPercent > 0 && (
                 <span className="absolute top-4 left-4 px-3 py-1 bg-[#FEEA85] text-slate-900 text-xs font-black rounded-full uppercase shadow-xs">
@@ -255,9 +252,10 @@ const ProductDetail = () => {
                     }`}
                   >
                     <img 
-                      src={img.imageUrl} 
+                      src={getSafeProductImage(img.imageUrl)}
                       alt={`${product.title || 'Product'} thumbnail ${idx + 1}`} 
                       className="w-full h-full object-contain" 
+                      onError={useProductImageFallback}
                     />
                   </button>
                 ))}
@@ -313,19 +311,23 @@ const ProductDetail = () => {
                   <div className="flex flex-wrap gap-2.5">
                     {product.variants.map((v) => {
                       const isSelected = selectedVariant?._id === v._id;
+                      const isVariantOutOfStock = (getAvailableStock(v, product) ?? 0) <= 0;
                       const sizeLabel = v.attributes?.pack_size || v.attributes?.size || `${v.price ? `₹${v.price}` : 'Pack'}`;
                       return (
                         <button
                           key={v._id}
                           type="button"
-                          onClick={() => setSelectedVariant(v)}
+                          disabled={isVariantOutOfStock}
+                          onClick={() => !isVariantOutOfStock && setSelectedVariant(v)}
                           className={`px-4 py-2 rounded-full text-xs font-bold border transition ${
-                            isSelected
+                            isVariantOutOfStock
+                              ? 'cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400 line-through opacity-70'
+                              : isSelected
                               ? 'border-[#635BFF] bg-[#EFEBFF] text-[#635BFF] shadow-xs'
                               : 'border-slate-200 text-slate-700 hover:border-slate-300'
                           }`}
                         >
-                          {sizeLabel}
+                          {sizeLabel}{isVariantOutOfStock ? ' · Out' : ''}
                         </button>
                       );
                     })}
@@ -355,16 +357,18 @@ const ProductDetail = () => {
                   <div className="flex items-center border border-slate-200 rounded-full bg-[#F4F4F8] p-1">
                     <button
                       type="button"
+                      disabled={stockQty <= 0}
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition shadow-2xs"
+                      className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Minus size={14} />
                     </button>
                     <span className="w-12 text-center text-xs font-black text-slate-900">{quantity}</span>
                     <button
                       type="button"
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition shadow-2xs"
+                      disabled={stockQty <= 0 || quantity >= stockQty}
+                      onClick={() => setQuantity(Math.min(stockQty, quantity + 1))}
+                      className="w-8 h-8 rounded-full bg-white hover:bg-slate-100 flex items-center justify-center text-slate-600 transition shadow-2xs disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Plus size={14} />
                     </button>
@@ -375,7 +379,7 @@ const ProductDetail = () => {
                     type="button"
                     disabled={stockQty <= 0}
                     onClick={handleAddToCart}
-                    className="flex-1 py-4 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full font-black text-xs transition shadow-xl shadow-[#635BFF]/30 flex items-center justify-center gap-2 disabled:opacity-50 active:scale-95"
+                    className="flex-1 py-4 bg-[#635BFF] hover:bg-[#5248EE] text-white rounded-full font-black text-xs transition shadow-xl shadow-[#635BFF]/30 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 disabled:opacity-55 disabled:shadow-none active:scale-95"
                   >
                     <ShoppingCart size={17} />
                     <span>Move to Bag</span>
@@ -387,7 +391,7 @@ const ProductDetail = () => {
                   type="button"
                   disabled={stockQty <= 0}
                   onClick={handleBuyNow}
-                  className="w-full py-3.5 bg-[#F4F4F8] hover:bg-[#EAEAF0] text-slate-900 rounded-full font-black text-xs transition shadow-xs flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                  className="w-full py-3.5 bg-[#F4F4F8] hover:bg-[#EAEAF0] text-slate-900 rounded-full font-black text-xs transition shadow-xs flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:text-slate-400 disabled:opacity-55 active:scale-98"
                 >
                   <Zap size={16} className="text-[#635BFF]" />
                   <span>Instant 1-Click Buy Now</span>
@@ -559,7 +563,12 @@ const ProductDetail = () => {
                 >
                   <div className="w-full h-36 rounded-2xl bg-slate-50 flex items-center justify-center overflow-hidden mb-2">
                     {p.images && p.images[0] ? (
-                      <img src={p.images[0].imageUrl} alt={p.title} className="w-full h-full object-cover" />
+                      <img
+                        src={getSafeProductImage(p.images[0].imageUrl)}
+                        alt={p.title}
+                        className="w-full h-full object-cover"
+                        onError={useProductImageFallback}
+                      />
                     ) : '🛒'}
                   </div>
                   <h5 className="text-xs font-bold text-slate-900 line-clamp-1">{p.title}</h5>

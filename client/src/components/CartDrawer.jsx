@@ -14,6 +14,7 @@ import {
   CreditCard,
   AlertTriangle 
 } from 'lucide-react';
+import { ArrowLeft as BackArrow } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
@@ -70,22 +71,24 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
       />
 
       <div className="fixed inset-y-0 right-0 max-w-full flex pl-0 sm:pl-10">
-        <div className="w-screen max-w-full sm:max-w-md bg-[#FBFBFE] shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+        <div className="cart-drawer-panel w-screen max-w-full sm:max-w-md bg-[#FBFBFE] shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
           
           {/* Drawer Header (Screen 1 style) */}
-          <div className="bg-white p-5 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white p-5 border-b border-slate-100 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Back to previous page"
+              className="w-9 h-9 rounded-full bg-[#F4F4F8] hover:bg-slate-200 text-slate-600 flex items-center justify-center transition active:scale-95 shrink-0"
+            >
+              <BackArrow size={18} />
+            </button>
             <div className="flex items-center gap-3">
               <h3 className="font-black text-xl text-slate-900 tracking-tight">Shopping Bag</h3>
               <span className="px-3 py-1 bg-[#EFEBFF] text-[#635BFF] text-xs font-black rounded-full">
                 {itemCount} {itemCount === 1 ? 'item' : 'items'}
               </span>
             </div>
-            <button 
-              onClick={onClose}
-              className="w-9 h-9 rounded-full bg-[#F4F4F8] hover:bg-slate-200 text-slate-600 flex items-center justify-center transition active:scale-95"
-            >
-              <X size={18} />
-            </button>
           </div>
 
           {/* Drawer Body */}
@@ -195,8 +198,12 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
                         </span>
                         <button
                           type="button"
-                          onClick={() => addToCart({ _id: it.productId, title: it.title, basePrice: it.price }, { _id: it.variantId, sku: it.sku, price: it.price })}
-                          className="px-2.5 py-1.5 hover:bg-white/20 transition active:scale-90"
+                          onClick={() => addToCart(
+                            { _id: it.productId, title: it.title, basePrice: it.price },
+                            { _id: it.variantId, sku: it.sku, price: it.price, availableStock: it.stockQuantity }
+                          )}
+                          disabled={it.stockQuantity !== undefined && it.stockQuantity !== null && Number(it.quantity) >= Number(it.stockQuantity)}
+                          className="px-2.5 py-1.5 hover:bg-white/20 transition active:scale-90 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <Plus size={12} strokeWidth={3} />
                         </button>
@@ -289,7 +296,7 @@ const CartDrawer = ({ isOpen, onClose, onCheckout }) => {
 
           {/* Drawer Footer CTA (Screen 1 Pill Button) */}
           {items.length > 0 && (
-            <div className="bg-white p-4 border-t border-slate-100">
+            <div className="cart-drawer-checkout bg-white p-4 border-t border-slate-100">
               <button
                 type="button"
                 onClick={onCheckout}

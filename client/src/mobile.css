@@ -117,6 +117,11 @@ svg {
 
   /* Storefront pages reserve space for the floating mobile dock and home bar. */
   .app-shell:not(.app-route-admin):not(.app-route-login):not(.app-route-register) {
+    padding-bottom: 0;
+  }
+
+  /* Pages without a footer still stay clear of the floating dock. */
+  .app-shell:not(.app-route-admin):not(.app-route-login):not(.app-route-register) #main-content > main {
     padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
 

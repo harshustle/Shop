@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingBag, ArrowRight } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import { getAvailableStock, isUnavailable } from '../../utils/inventory';
 
 const WishlistTab = ({ wishlistProducts = [], onRemoveItem }) => {
   const { addToCart } = useCart();
@@ -80,6 +81,8 @@ const WishlistTab = ({ wishlistProducts = [], onRemoveItem }) => {
           {wishlistProducts.map((p) => {
             const price = p.price || 80;
             const discount = p.discountPercent || (p.originalPrice ? Math.round(((p.originalPrice - price) / p.originalPrice) * 100) : 23);
+            const variant = p.variants?.find((item) => (getAvailableStock(item, p) ?? 1) > 0) || p.variants?.[0];
+            const outOfStock = isUnavailable(p, variant);
 
             return (
               <div
@@ -132,13 +135,13 @@ const WishlistTab = ({ wishlistProducts = [], onRemoveItem }) => {
                 <button
                   type="button"
                   onClick={() => {
-                    addToCart(p);
-                    onRemoveItem(p._id);
+                    if (addToCart(p, variant)) onRemoveItem(p._id);
                   }}
-                  className="w-full py-2.5 px-3 bg-[#F4F4F8] hover:bg-[#EAEAF0] active:scale-[0.98] text-slate-800 rounded-full text-[11px] font-bold transition flex items-center justify-center gap-1.5"
+                  disabled={outOfStock}
+                  className="w-full py-2.5 px-3 bg-[#F4F4F8] hover:bg-[#EAEAF0] active:scale-[0.98] text-slate-800 rounded-full text-[11px] font-bold transition flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:bg-[#F4F4F8]"
                 >
                   <ShoppingBag size={13} className="text-slate-700" />
-                  <span>Move to bag</span>
+                  <span>{outOfStock ? 'Out of stock' : 'Move to bag'}</span>
                 </button>
               </div>
             );

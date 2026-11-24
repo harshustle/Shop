@@ -145,6 +145,13 @@ const productSchema = new mongoose.Schema({
         type: String,
         default: 'General'
     },
+    categorySlug: {
+        type: String,
+        default: 'general',
+        lowercase: true,
+        trim: true,
+        index: true
+    },
     isPublished: {
         type: Boolean,
         default: true

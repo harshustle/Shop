@@ -11,20 +11,10 @@ import CartDrawer from '../components/CartDrawer';
 import CheckoutModal from '../components/CheckoutModal';
 import ProductCard from '../components/ProductCard';
 import LocationPickerModal from '../components/LocationPickerModal';
+import StorefrontPageSkeleton from '../components/StorefrontPageSkeleton';
 import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
-
-const CATEGORY_FILTERS = [
-  { slug: 'all', name: 'All Items' },
-  { slug: 'dairy', name: 'Dairy & Bread' },
-  { slug: 'vegetables', name: 'Vegetables' },
-  { slug: 'fruits', name: 'Fresh Fruits' },
-  { slug: 'atta-rice-dal', name: 'Atta, Rice & Dal' },
-  { slug: 'oil-ghee', name: 'Oils & Ghee' },
-  { slug: 'snacks', name: 'Snacks & Biscuits' },
-  { slug: 'drinks', name: 'Cold Drinks & Tea' },
-  { slug: 'cleaning', name: 'Cleaning & Household' }
-];
+import { SHOP_CATEGORY_FILTERS } from '../catalogCategories';
 
 const SORT_OPTIONS = [
   { id: 'featured', label: 'Featured' },
@@ -35,7 +25,12 @@ const SORT_OPTIONS = [
 
 const Shop = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { isLocationModalOpen, setIsLocationModalOpen } = useCart();
+  const {
+    isLocationModalOpen,
+    setIsLocationModalOpen,
+    isCartOpen,
+    setIsCartOpen
+  } = useCart();
 
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +45,6 @@ const Shop = () => {
   const sortRef = useRef(null);
 
   // Cart & Checkout Drawers
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   useEffect(() => {
@@ -119,6 +113,8 @@ const Shop = () => {
           if (!catStr.includes('drink') && !catStr.includes('juice') && !catStr.includes('coke') && !catStr.includes('cola') && !catStr.includes('thums') && !catStr.includes('tea') && !catStr.includes('coffee') && !catStr.includes('nescafe') && !catStr.includes('sprite') && !catStr.includes('red bull') && !catStr.includes('frooti')) return false;
         } else if (selectedCategory === 'cleaning-household' || selectedCategory === 'cleaning') {
           if (!catStr.includes('clean') && !catStr.includes('surf') && !catStr.includes('detergent') && !catStr.includes('vim') && !catStr.includes('dettol') && !catStr.includes('handwash') && !catStr.includes('harpic') && !catStr.includes('colin') && !catStr.includes('toothpaste') && !catStr.includes('colgate') && !catStr.includes('whisper') && !catStr.includes('wash') && !catStr.includes('ariel')) return false;
+        } else if (selectedCategory === 'masalas-spices') {
+          if (!catStr.includes('masala') && !catStr.includes('spice') && !catStr.includes('oil') && !catStr.includes('ghee') && !catStr.includes('salt') && !catStr.includes('haldi') && !catStr.includes('mirch')) return false;
         } else {
           const catSlug = (p.categorySlug || p.categoryName || '').toLowerCase().replace(/\s+/g, '-');
           if (!catSlug.includes(selectedCategory.toLowerCase())) return false;
@@ -140,13 +136,13 @@ const Shop = () => {
   const activeSortLabel = SORT_OPTIONS.find(o => o.id === sortBy)?.label || 'Featured';
 
   return (
-    <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text-primary)] flex flex-col font-sans transition-colors duration-200">
+    <div className="storefront-shop min-h-screen bg-[var(--app-bg)] text-[var(--app-text-primary)] flex flex-col font-sans transition-colors duration-200">
       
       {/* Sleek Navbar */}
       <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
 
       {/* Catalog Header Bar */}
-      <div className="bg-[var(--app-card)] border-b border-black/[0.04] dark:border-white/[0.06] py-2.5 transition-colors">
+      <div className="storefront-shop-header bg-[var(--app-card)] border-b border-black/[0.04] dark:border-white/[0.06] py-2.5 transition-colors">
         <div className="max-w-7xl mx-auto px-3.5 sm:px-6 flex items-center justify-between gap-3">
           <div>
             <h1 className="text-sm sm:text-base font-black tracking-tight text-[var(--app-text-primary)]">
@@ -194,9 +190,9 @@ const Shop = () => {
       </div>
 
       {/* Category Pills Strip */}
-      <div className="max-w-7xl mx-auto px-3.5 sm:px-6 pt-3 pb-2 w-full">
-        <div className="flex flex-wrap items-center gap-2">
-          {CATEGORY_FILTERS.map((cat) => (
+      <div className="storefront-filters max-w-7xl mx-auto px-3.5 sm:px-6 pt-3 pb-2 w-full">
+        <div className="storefront-filter-list flex flex-wrap items-center gap-2">
+          {SHOP_CATEGORY_FILTERS.map((cat) => (
             <button
               key={cat.slug}
               type="button"
@@ -219,11 +215,7 @@ const Shop = () => {
       {/* Main Grid */}
       <main className="max-w-7xl mx-auto px-3.5 sm:px-6 py-4 flex-1 w-full">
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-            {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-56 bg-black/[0.03] dark:bg-white/[0.05] rounded-2xl animate-pulse" />
-            ))}
-          </div>
+          <StorefrontPageSkeleton />
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12 bg-[var(--app-card)] rounded-2xl border border-black/[0.05] dark:border-white/[0.07] p-6 max-w-sm mx-auto">
             <span className="text-3xl block mb-2">🔍</span>
@@ -242,7 +234,7 @@ const Shop = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+          <div className="storefront-product-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
             {filteredProducts.map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
@@ -251,7 +243,7 @@ const Shop = () => {
       </main>
 
       {/* Footer */}
-      <FreshCartFooter />
+      {!isLoading && <FreshCartFooter />}
 
       {/* Drawers */}
       <CartDrawer

@@ -1,8 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { 
+  ArrowRight,
   ChevronRight, 
-  MapPin
+  Clock3,
+  MapPin,
+  ShieldCheck,
+  ShoppingBag
 } from 'lucide-react';
 import FreshCartNavbar from '../components/FreshCartNavbar';
 import FreshCartFooter from '../components/FreshCartFooter';
@@ -10,30 +14,24 @@ import CartDrawer from '../components/CartDrawer';
 import CheckoutModal from '../components/CheckoutModal';
 import ProductCard from '../components/ProductCard';
 import LocationPickerModal from '../components/LocationPickerModal';
+import StorefrontPageSkeleton from '../components/StorefrontPageSkeleton';
 import { useCart } from '../context/CartContext';
 import { API_URL } from '../config';
-
-const CATEGORIES = [
-  { slug: 'dairy-breakfast', name: 'Dairy', icon: '🥛', color: '#EDE9FE' },
-  { slug: 'staples-and-grains', name: 'Atta & Rice', icon: '🌾', color: '#FEF3C7' },
-  { slug: 'edible-oils', name: 'Oils & Ghee', icon: '🛢️', color: '#E0F2FE' },
-  { slug: 'packaged-foods-snacks', name: 'Snacks', icon: '☕', color: '#FFEDD5' },
-  { slug: 'organic-vegetables', name: 'Vegetables', icon: '🥦', color: '#E8F8F0' },
-  { slug: 'fresh-fruits', name: 'Fruits', icon: '🍎', color: '#FEE2E2' }
-];
+import { CATALOG_CATEGORIES } from '../catalogCategories';
 
 const Home = () => {
   const { 
     isLocationModalOpen, 
     setIsLocationModalOpen, 
-    selectedLocation 
+    selectedLocation,
+    isCartOpen,
+    setIsCartOpen
   } = useCart();
 
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Cart & Checkout
-  const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   // Automatically open Basti map modal on first homepage visit
@@ -49,7 +47,7 @@ const Home = () => {
   useEffect(() => {
     const fetchCatalog = async () => {
       try {
-        const res = await fetch(`${API_URL}/api/catalog/search?limit=36`);
+        const res = await fetch(`${API_URL}/api/catalog/search?limit=100`);
         if (res.ok) {
           const data = await res.json();
           setProducts(data.items || data.products || []);
@@ -63,8 +61,13 @@ const Home = () => {
     fetchCatalog();
   }, []);
 
-  const dailyPicks = products.slice(0, 8);
-  const pantryStaples = products.slice(8, 20);
+  const categorySections = useMemo(() => CATALOG_CATEGORIES.map((category) => {
+    const acceptedSlugs = category.slug === 'masalas-spices'
+      ? ['masalas-spices', 'oil-ghee']
+      : [category.slug];
+    const items = products.filter((product) => acceptedSlugs.includes(product.categorySlug));
+    return { ...category, items };
+  }).filter((category) => category.items.length > 0), [products]);
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text-primary)] flex flex-col font-sans transition-colors duration-200">
@@ -73,10 +76,41 @@ const Home = () => {
       <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
 
       {/* Main Content Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 py-4 space-y-6">
+      <main className="storefront-main flex-1 max-w-7xl w-full mx-auto px-3.5 sm:px-6 py-4 space-y-6">
+
+        <section className="storefront-hero" aria-labelledby="storefront-hero-title">
+          <div className="storefront-hero__main">
+            <span className="storefront-eyebrow">Basti's quick grocery store</span>
+            <h1 id="storefront-hero-title">Daily needs,<br />at your door.</h1>
+            <p>Fresh groceries, household essentials and local favourites delivered without the long wait.</p>
+            <div className="storefront-hero__actions">
+              <Link to="/shop" className="storefront-primary-action">
+                <ShoppingBag size={17} /> Shop groceries <ArrowRight size={17} />
+              </Link>
+              <button type="button" onClick={() => setIsLocationModalOpen(true)} className="storefront-secondary-action">
+                <MapPin size={16} /> Change location
+              </button>
+            </div>
+          </div>
+
+          <div className="storefront-hero__promise">
+            <Clock3 size={24} />
+            <span>Delivery promise</span>
+            <strong>12 min</strong>
+            <small>across active Basti zones</small>
+          </div>
+
+          <div className="storefront-hero__trust">
+            <ShieldCheck size={22} />
+            <div>
+              <strong>Quality checked</strong>
+              <span>Fresh stock, secure payments</span>
+            </div>
+          </div>
+        </section>
 
         {/* Location Header Banner */}
-        <div className="bg-[var(--app-card)] rounded-2xl px-4 py-3 border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex items-center justify-between">
+        <div className="storefront-location-bar bg-[var(--app-card)] rounded-2xl px-4 py-3 border border-black/[0.06] dark:border-white/[0.08] shadow-xs flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-[#635BFF]/10 text-[#635BFF] flex items-center justify-center shrink-0">
               <MapPin size={16} />
@@ -99,7 +133,7 @@ const Home = () => {
         </div>
 
         {/* Categories Section */}
-        <section className="space-y-3">
+        <section className="storefront-category-section space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs sm:text-sm font-black uppercase tracking-wider text-[var(--app-text-muted)]">
               Categories
@@ -110,10 +144,10 @@ const Home = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-6 gap-2 sm:gap-3">
-            {CATEGORIES.map((cat, idx) => (
+          <div className="storefront-category-grid grid grid-cols-6 gap-2 sm:gap-3">
+            {CATALOG_CATEGORIES.map((cat) => (
               <Link
-                key={idx}
+                key={cat.slug}
                 to={`/shop?category=${cat.slug}`}
                 className="bg-[var(--app-card)] p-2 sm:p-3 rounded-2xl border border-black/[0.05] dark:border-white/[0.07] hover:border-[#635BFF]/30 hover:shadow-xs transition text-center flex flex-col items-center justify-center gap-1.5 group"
               >
@@ -131,64 +165,35 @@ const Home = () => {
           </div>
         </section>
 
-        {/* Daily Essentials */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm sm:text-base font-black text-[var(--app-text-primary)] tracking-tight">
-                Daily Essentials
-              </h2>
-              <p className="text-xs text-[var(--app-text-muted)] mt-0.5">Dairy, flours & staples</p>
-            </div>
-            <Link to="/shop" className="text-xs sm:text-sm font-bold text-[#635BFF] flex items-center gap-1 hover:underline">
-              <span>See More</span>
-              <ChevronRight size={14} />
-            </Link>
-          </div>
-
-          {isLoading ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-56 bg-black/[0.03] dark:bg-white/[0.05] rounded-2xl animate-pulse" />
-              ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-              {dailyPicks.map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* Pantry Staples */}
-        {pantryStaples.length > 0 && (
-          <section className="space-y-3">
+        {isLoading ? (
+          <StorefrontPageSkeleton />
+        ) : categorySections.map((category) => (
+          <section className="storefront-product-section space-y-3" key={category.slug}>
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-sm sm:text-base font-black text-[var(--app-text-primary)] tracking-tight">
-                  Pantry Staples
+                  {category.name}
                 </h2>
-                <p className="text-xs text-[var(--app-text-muted)] mt-0.5">Oils, rice & packaged goods</p>
+                <p className="text-xs text-[var(--app-text-muted)] mt-0.5">{category.items.length} products available</p>
               </div>
-              <Link to="/shop" className="text-xs sm:text-sm font-bold text-[#635BFF] flex items-center gap-1 hover:underline">
-                <span>Explore</span>
+              <Link to={`/shop?category=${category.slug}`} className="text-xs sm:text-sm font-bold text-[#635BFF] flex items-center gap-1 hover:underline">
+                <span>See all</span>
                 <ChevronRight size={14} />
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
-              {pantryStaples.map((product) => (
+            <div className="storefront-product-rail">
+              {category.items.map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))}
             </div>
           </section>
-        )}
+        ))}
 
       </main>
 
       {/* Small Minimal Footer */}
-      <FreshCartFooter />
+      {!isLoading && <FreshCartFooter />}
 
       {/* Cart Drawer & Checkout Modal */}
       <CartDrawer

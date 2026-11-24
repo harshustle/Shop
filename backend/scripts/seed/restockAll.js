@@ -15,7 +15,34 @@ async function restock() {
       } 
     }
   );
+  const outOfStockSkus = String(process.env.TEST_OUT_OF_STOCK_SKUS || '')
+    .split(',')
+    .map(sku => sku.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (outOfStockSkus.length > 0) {
+    await Product.updateMany(
+      { "variants.sku": { $in: outOfStockSkus } },
+      {
+        $set: {
+          "variants.$[variant].stockQuantity": 0,
+          "variants.$[variant].stockOnHand": 0,
+          "variants.$[variant].stockAllocated": 0
+        }
+      },
+      { arrayFilters: [{ "variant.sku": { $in: outOfStockSkus } }] }
+    );
+  }
+
+  const redisService = require('../../services/cache/redisService');
+  await redisService.flushPattern('cache:catalog:*');
+  await redisService.flushPattern('stock:sku:*');
+  await redisService.flushPattern('reserve:sku:*');
+  if (redisService.client) {
+    try { await redisService.client.quit(); } catch (e) {}
+  }
   console.log('Restocked variants in shop db:', res);
+  console.log('Kept out of stock for UI testing:', outOfStockSkus);
   await mongoose.disconnect();
 }
 

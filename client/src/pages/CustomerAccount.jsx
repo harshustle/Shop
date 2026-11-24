@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import FreshCartNavbar from '../components/FreshCartNavbar';
 import FreshCartFooter from '../components/FreshCartFooter';
 import CartDrawer from '../components/CartDrawer';
+import StorefrontPageSkeleton from '../components/StorefrontPageSkeleton';
 
 // Modular Account Components
 import AccountMenu from '../components/account/AccountMenu';
@@ -25,10 +26,12 @@ import PolicyModal from '../components/account/PolicyModal';
 import LogoutConfirmModal from '../components/account/LogoutConfirmModal';
 
 import { API_URL } from '../config';
+import { useCart } from '../context/CartContext';
 
 const CustomerAccount = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isCartOpen, setIsCartOpen } = useCart();
 
   // Active Tab & Modal States
   const paramTab = searchParams.get('tab');
@@ -45,7 +48,6 @@ const CustomerAccount = () => {
 
   // Profile Form state
   const [profileForm, setProfileForm] = useState({ fullName: '', email: '', phone: '' });
-  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Mobile View state (allows toggling between menu list and tab content on small screens)
   const [showMobileContent, setShowMobileContent] = useState(Boolean(paramTab));
@@ -180,6 +182,16 @@ const CustomerAccount = () => {
       console.error('Remove wishlist error:', err);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--app-bg)] flex flex-col font-sans">
+        <FreshCartNavbar onOpenCart={() => setIsCartOpen(true)} />
+        <StorefrontPageSkeleton variant="account" />
+        <CartDrawer isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F6FB] text-slate-800 flex flex-col font-sans">

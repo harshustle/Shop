@@ -6,7 +6,12 @@ import { useCart } from '../context/CartContext';
 const FloatingNavDock = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { itemCount, setIsCartOpen } = useCart();
+  const { itemCount, isCartOpen, setIsCartOpen } = useCart();
+
+  const goTo = (path) => {
+    setIsCartOpen(false);
+    navigate(path);
+  };
 
   // Hide on auth screens and admin dashboard (Admin has its own dedicated mobile navbar)
   if (
@@ -23,14 +28,14 @@ const FloatingNavDock = () => {
   const isAccount = (location.pathname === '/account' && !isWishlist) || location.pathname === '/orders' || location.pathname === '/track-order';
 
   return (
-    <div className="fixed left-1/2 -translate-x-1/2 z-40 w-auto max-w-[calc(100vw-20px)] pointer-events-auto bottom-[max(10px,env(safe-area-inset-bottom))]">
+    <div className={`fixed left-1/2 -translate-x-1/2 ${isCartOpen ? 'z-[60]' : 'z-40'} w-auto max-w-[calc(100vw-20px)] pointer-events-auto bottom-[max(10px,env(safe-area-inset-bottom))]`}>
       <nav 
         aria-label="Mobile Navigation"
         className="bg-[var(--app-card)]/95 backdrop-blur-xl border border-black/[0.06] dark:border-white/[0.1] shadow-[0_12px_36px_rgba(0,0,0,0.12)] rounded-full px-1.5 min-[360px]:px-2.5 py-1.5 flex items-center gap-0.5 min-[360px]:gap-1.5 sm:gap-2 transition-all duration-300"
       >
         {/* 1. Home */}
         <button
-          onClick={() => navigate('/')}
+          onClick={() => goTo('/')}
           className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 active:scale-95 ${
             isHome 
               ? 'bg-[#635BFF]/15 text-[#635BFF] dark:text-[#A59FFF] shadow-xs' 
@@ -44,7 +49,7 @@ const FloatingNavDock = () => {
 
         {/* 2. Search / Shop Catalog */}
         <button
-          onClick={() => navigate('/shop')}
+          onClick={() => goTo('/shop')}
           className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 active:scale-95 ${
             isShop 
               ? 'bg-[#635BFF]/15 text-[#635BFF] dark:text-[#A59FFF] shadow-xs' 
@@ -58,7 +63,7 @@ const FloatingNavDock = () => {
 
         {/* 3. Shopping Bag / Cart */}
         <button
-          onClick={() => setIsCartOpen(true)}
+          onClick={() => setIsCartOpen((open) => !open)}
           className="relative flex items-center justify-center w-10 h-10 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-all duration-300 active:scale-95"
           title="My Cart"
           aria-label={`My cart${itemCount ? `, ${itemCount} items` : ''}`}
@@ -73,7 +78,7 @@ const FloatingNavDock = () => {
 
         {/* 4. Wishlist */}
         <button
-          onClick={() => navigate('/account?tab=wishlist')}
+          onClick={() => goTo('/account?tab=wishlist')}
           className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 active:scale-95 ${
             isWishlist 
               ? 'bg-[#635BFF]/15 text-[#635BFF] dark:text-[#A59FFF] shadow-xs' 
@@ -87,7 +92,7 @@ const FloatingNavDock = () => {
 
         {/* 5. User Account */}
         <button
-          onClick={() => navigate('/account')}
+          onClick={() => goTo('/account')}
           className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 active:scale-95 ${
             isAccount 
               ? 'bg-[#635BFF]/15 text-[#635BFF] dark:text-[#A59FFF] shadow-xs' 

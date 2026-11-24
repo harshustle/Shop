@@ -111,16 +111,23 @@ const FreshCartNavbar = ({ onOpenCart }) => {
   };
 
   return (
-    <header className="sticky top-0 z-40 bg-[var(--app-card)]/95 backdrop-blur-md border-b border-black/[0.04] dark:border-white/[0.06] transition-colors">
+    <header className="storefront-navbar sticky top-0 z-40 bg-[var(--app-card)]/95 backdrop-blur-md border-b border-black/[0.04] dark:border-white/[0.06] transition-colors">
       <div className="max-w-7xl mx-auto px-3.5 sm:px-6">
         <div className="flex items-center justify-between h-14 sm:h-16 gap-2 sm:gap-4">
           
           {/* Brand */}
-          <Link to="/" className="flex items-center shrink-0 group">
-            <span className="text-xl sm:text-2xl font-black lowercase tracking-tighter text-[var(--app-text-primary)] hover:opacity-80 transition">
-              fresh
+          <Link to="/" className="storefront-brand flex items-center shrink-0 group" aria-label="Fresh home">
+            <span className="storefront-brand__mark"><ShoppingBag size={17} /></span>
+            <span className="storefront-brand__word text-xl sm:text-2xl font-black lowercase tracking-tighter text-[var(--app-text-primary)] hover:opacity-80 transition">
+              fresh<span>.</span>
             </span>
           </Link>
+
+          <nav className="storefront-desktop-links" aria-label="Store navigation">
+            <Link to="/home">Home</Link>
+            <Link to="/shop">Shop</Link>
+            {token && <Link to="/orders">Orders</Link>}
+          </nav>
 
           {/* Location Button */}
           <button 
@@ -137,7 +144,7 @@ const FreshCartNavbar = ({ onOpenCart }) => {
           </button>
 
           {/* Sleek Search Bar */}
-          <div ref={searchRef} className="flex-1 max-w-sm relative hidden sm:block">
+          <div ref={searchRef} className="storefront-search flex-1 max-w-sm relative hidden sm:block">
             <form onSubmit={handleSearchSubmit}>
               <div className="relative">
                 <Search size={14} className="absolute left-3.5 top-2.5 text-slate-400" />

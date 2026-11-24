@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Clock3, MapPin, Package, RefreshCw, ShoppingBag } from 'lucide-react';
 import OrderStatusTracker, { getOrderStatusLabel, normalizeOrderStatus } from '../components/orders/OrderStatusTracker';
+import StorefrontPageSkeleton from '../components/StorefrontPageSkeleton';
 import { API_URL } from '../config';
 
 const formatDate = (value) => value
@@ -71,6 +72,7 @@ const UserOrders = () => {
           <button onClick={() => fetchOrders()} className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white" aria-label="Refresh orders"><RefreshCw size={17} className={isLoading ? 'animate-spin' : ''} /></button>
         </header>
 
+        {isLoading && <StorefrontPageSkeleton variant="account" />}
         {error && <div className="border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">{error}</div>}
         {!isLoading && !error && orders.length === 0 && (
           <section className="border border-slate-200 bg-white p-10 text-center">

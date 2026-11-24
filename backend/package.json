@@ -12,6 +12,7 @@
     "seed:taxonomy": "node scripts/seed/seedTaxonomy.js",
     "seed:coupons": "node scripts/seed/seedCouponsAndBanners.js",
     "seed:demo": "node scripts/seed/seedDemoData.js",
+    "seed:catalog": "node scripts/seed/seedBlinkitProducts.js",
     "seed:restock": "node scripts/seed/restockAll.js",
     "db:audit": "node scripts/db/auditDatabase.js"
   },

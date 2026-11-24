@@ -8,7 +8,7 @@ const FreshCartFooter = () => {
   };
 
   return (
-    <footer className="mt-auto border-t border-black/[0.06] dark:border-white/[0.08] bg-[var(--app-card)]/90 py-6 transition-colors text-xs text-[var(--app-text-muted)]">
+    <footer className="storefront-footer mt-auto border-t border-black/[0.06] dark:border-white/[0.08] bg-[var(--app-card)]/90 py-6 transition-colors text-xs text-[var(--app-text-muted)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-4">
         
         {/* Top Row: Business Identity & Legal Navigation Links */}

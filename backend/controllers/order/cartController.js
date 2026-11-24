@@ -5,6 +5,21 @@ const { v4: uuidv4 } = require('uuid');
 
 const CART_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
 
+const sanitizeCartItems = async (items = []) => {
+    const checked = await Promise.all(items.map(async (item) => {
+        const variantKey = item.variantId || item.variant_id || item.sku;
+        if (!variantKey) return null;
+        const available = await InventoryService.getAvailableStock(variantKey);
+        if (available <= 0) return null;
+        return {
+            ...item,
+            quantity: Math.min(Math.max(1, Number(item.quantity) || 1), available),
+            stockQuantity: available
+        };
+    }));
+    return checked.filter(Boolean);
+};
+
 /**
  * Returns user-specific or guest-specific Redis key
  */
@@ -54,13 +69,17 @@ const getCart = async (req, res) => {
         // 1. Check Redis first
         const cached = await RedisService.get(cartKey);
         if (cached && Array.isArray(cached.items)) {
-            const itemCount = cached.items.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0);
-            const subtotal = parseFloat(cached.items.reduce((acc, it) => acc + ((Number(it.price) || 0) * (Number(it.quantity) || 1)), 0).toFixed(2));
+            const validItems = await sanitizeCartItems(cached.items);
+            const itemCount = validItems.reduce((acc, it) => acc + (Number(it.quantity) || 1), 0);
+            const subtotal = parseFloat(validItems.reduce((acc, it) => acc + ((Number(it.price) || 0) * (Number(it.quantity) || 1)), 0).toFixed(2));
+            if (validItems.length !== cached.items.length || validItems.some((item, index) => item.quantity !== cached.items[index]?.quantity)) {
+                await RedisService.set(cartKey, { items: validItems, itemCount, subtotal, updatedAt: new Date() }, CART_TTL);
+            }
             return res.json({
                 cart_id: cartKey,
                 session_token: sessionToken,
                 storage: 'redis',
-                items: cached.items,
+                items: validItems,
                 item_count: itemCount,
                 subtotal
             });
@@ -70,9 +89,7 @@ const getCart = async (req, res) => {
         const cart = await getOrCreateCart(userId, sessionToken);
 
         let subtotal = 0;
-        const formattedItems = cart.items.map(item => {
-            const lineSubtotal = parseFloat((item.price * item.quantity).toFixed(2));
-            subtotal += lineSubtotal;
+        const rawItems = cart.items.map(item => {
             return {
                 variantId: item.variantId,
                 productId: item.productId,
@@ -83,6 +100,8 @@ const getCart = async (req, res) => {
                 quantity: item.quantity
             };
         });
+        const formattedItems = await sanitizeCartItems(rawItems);
+        subtotal = formattedItems.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity)), 0);
 
         // 3. Hydrate into Redis
         await RedisService.set(cartKey, {
@@ -113,7 +132,7 @@ const syncCart = async (req, res) => {
         const { items } = req.body;
 
         const cartKey = getCartKey(userId, sessionToken);
-        const cartItems = Array.isArray(items) ? items : [];
+        const cartItems = await sanitizeCartItems(Array.isArray(items) ? items : []);
 
         let subtotal = 0;
         let itemCount = 0;
@@ -273,12 +292,19 @@ const clearCart = async (req, res) => {
         const userId = req.userId || null;
         const cartKey = getCartKey(userId, sessionToken);
 
-        // Delete from Redis
-        await RedisService.del(cartKey);
-
+        // Clear the durable cart first so a concurrent GET cannot rehydrate stale items.
         const cart = await getOrCreateCart(userId, sessionToken);
         cart.items = [];
         await cart.save();
+
+        // Keep an explicit empty Redis cart instead of deleting the key. A deleted
+        // key would make getCart fall back to MongoDB during the clear operation.
+        await RedisService.set(cartKey, {
+            items: [],
+            itemCount: 0,
+            subtotal: 0,
+            updatedAt: new Date()
+        }, CART_TTL);
         res.json({ message: 'Cart cleared', items: [], subtotal: 0 });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { API_URL } from '../config';
+import { getAvailableStock, isUnavailable } from '../utils/inventory';
 
 const CartContext = createContext();
 
@@ -35,6 +36,13 @@ export const CartProvider = ({ children }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [recentOrder, setRecentOrder] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('freshcart_recent_order') || 'null');
+    } catch (e) {
+      return null;
+    }
+  });
   const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [isLoadingFromRedis, setIsLoadingFromRedis] = useState(true);
 
@@ -181,6 +189,10 @@ export const CartProvider = ({ children }) => {
    * Adds product & variant to cart
    */
   const addToCart = (product, variant, qty = 1) => {
+    const explicitStock = getAvailableStock(variant, product);
+    if (explicitStock !== undefined && explicitStock !== null && Number(explicitStock) <= 0) return false;
+    if (isUnavailable(product, variant)) return false;
+
     setItems(prevItems => {
       const variantId = variant?._id || variant?.variant_id || variant?.sku || product._id;
       const existingIndex = prevItems.findIndex(it => it.variantId === variantId);
@@ -195,7 +207,9 @@ export const CartProvider = ({ children }) => {
         const updated = [...prevItems];
         updated[existingIndex] = {
           ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + qty
+          quantity: explicitStock === undefined || explicitStock === null
+            ? updated[existingIndex].quantity + qty
+            : Math.min(Number(explicitStock), updated[existingIndex].quantity + qty)
         };
         return updated;
       }
@@ -211,10 +225,14 @@ export const CartProvider = ({ children }) => {
           comparePrice,
           image,
           attributes,
-          quantity: qty
+          stockQuantity: explicitStock,
+          quantity: explicitStock === undefined || explicitStock === null
+            ? qty
+            : Math.min(Number(explicitStock), qty)
         }
       ];
     });
+    return true;
   };
 
   /**
@@ -252,6 +270,26 @@ export const CartProvider = ({ children }) => {
       console.warn('[CartContext] Redis clear error:', err.message);
     }
   };
+
+  const publishRecentOrder = useCallback((order = {}) => {
+    const normalizedOrder = {
+      id: order._id || order.id || order.orderId || order.orderNumber,
+      orderNumber: order.orderNumber || order.order_number || order.orderId || order._id,
+      status: order.orderStatus || order.status || 'Order placed',
+      total: order.totalAmount || order.total || order.pricing?.finalTotal || null,
+      createdAt: order.createdAt || new Date().toISOString()
+    };
+    setRecentOrder(normalizedOrder);
+    try {
+      sessionStorage.setItem('freshcart_recent_order', JSON.stringify(normalizedOrder));
+    } catch (e) {}
+    return normalizedOrder;
+  }, []);
+
+  const dismissRecentOrder = useCallback(() => {
+    setRecentOrder(null);
+    try { sessionStorage.removeItem('freshcart_recent_order'); } catch (e) {}
+  }, []);
 
   // Computations
   const itemCount = items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
@@ -336,7 +374,10 @@ export const CartProvider = ({ children }) => {
         selectedLocation,
         setSelectedLocation: setLocation,
         setLocation,
-        isLoadingFromRedis
+        isLoadingFromRedis,
+        recentOrder,
+        publishRecentOrder,
+        dismissRecentOrder
       }}
     >
       {children}

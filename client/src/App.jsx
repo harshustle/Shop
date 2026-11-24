@@ -19,6 +19,8 @@ import LegalPage from './pages/LegalPage';
 import FloatingNavDock from './components/FloatingNavDock';
 import CookieConsent from './components/CookieConsent';
 import GooglePhoneVerificationModal from './components/GooglePhoneVerificationModal';
+import ActiveOrderBar from './components/ActiveOrderBar';
+import ScrollStateManager from './components/ScrollStateManager';
 
 // Requirement: First page should open as signup (/register) if unauthenticated.
 // After OTP signup/login, automatically opens Home (where Basti map opens immediately).
@@ -39,8 +41,9 @@ const AppContent = () => {
     <div className={`app-shell app-route-${routeName} bg-[var(--app-bg)] text-[var(--app-text-primary)] font-sans antialiased transition-colors duration-200 ${
       isAuthRoute 
         ? 'min-h-screen min-h-[100dvh] overflow-x-hidden overflow-y-auto p-0'
-        : 'min-h-screen pb-20'
+        : 'min-h-screen'
     }`}>
+      <ScrollStateManager />
       {/* Requirement 15: Accessibility Skip to Content Link */}
       <a 
         href="#main-content" 
@@ -116,6 +119,8 @@ const AppContent = () => {
 
       {/* Floating Mobile Dock */}
       <FloatingNavDock />
+
+      <ActiveOrderBar />
 
       {!isAuthRoute && <GooglePhoneVerificationModal />}
     </div>

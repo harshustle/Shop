@@ -6,6 +6,32 @@ const path = require('path');
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+// This master taxonomy is seeded independently of product availability so the
+// storefront can always show every shopping department.
+const CATALOG_CATEGORIES = [
+  ['paan-corner', 'Paan Corner'],
+  ['dairy-bread', 'Dairy, Bread & Eggs'],
+  ['vegetables-fruits', 'Fruits & Vegetables'],
+  ['cold-drinks-juices', 'Cold Drinks & Juices'],
+  ['snacks-munchies', 'Snacks & Munchies'],
+  ['breakfast-instant-food', 'Breakfast & Instant Food'],
+  ['sweet-tooth', 'Sweet Tooth'],
+  ['bakery-biscuits', 'Bakery & Biscuits'],
+  ['tea-coffee-more', 'Tea, Coffee & Milk Drinks'],
+  ['atta-rice-dal', 'Atta, Rice & Dal'],
+  ['masalas-spices', 'Masala, Oil & More'],
+  ['oil-ghee', 'Oil & Ghee'],
+  ['sauces-spreads', 'Sauces & Spreads'],
+  ['chicken-meat-fish', 'Chicken, Meat & Fish'],
+  ['organic-healthy-living', 'Organic & Healthy Living'],
+  ['baby-care', 'Baby Care'],
+  ['pharma-wellness', 'Pharma & Wellness'],
+  ['cleaning-household', 'Cleaning Essentials'],
+  ['home-office', 'Home & Office'],
+  ['personal-care', 'Personal Care'],
+  ['pet-care', 'Pet Care']
+];
+
 const BLINKIT_PRODUCTS = [
   // =========================================================================
   // 1. DAIRY, BREAD & EGGS
@@ -787,7 +813,26 @@ async function seedBlinkitCatalog() {
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB. Seeding real Blinkit catalog items...');
 
+    const categoriesBySlug = new Map();
+    for (const [slug, name] of CATALOG_CATEGORIES) {
+      const category = await Category.findOneAndUpdate(
+        { slug },
+        {
+          $set: {
+            name,
+            slug,
+            description: `${name} products and daily essentials`,
+            isActive: true
+          }
+        },
+        { upsert: true, new: true, runValidators: true }
+      );
+      categoriesBySlug.set(slug, category);
+    }
+    console.log(`Seeded ${categoriesBySlug.size} permanent catalog categories.`);
+
     for (const item of BLINKIT_PRODUCTS) {
+      const category = categoriesBySlug.get(item.categorySlug);
       await Product.findOneAndUpdate(
         { slug: item.slug },
         {
@@ -799,6 +844,7 @@ async function seedBlinkitCatalog() {
             basePrice: item.basePrice,
             categoryName: item.categoryName,
             categorySlug: item.categorySlug,
+            category: category?._id || null,
             isPublished: true,
             variants: item.variants,
             images: item.images
